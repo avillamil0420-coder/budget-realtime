@@ -2,86 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Budget Tracker (Realtime)</title>
   <link rel="icon" href="data:,"><!-- silence favicon 404 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif}
-    body{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);color:#333;min-height:100vh;padding:15px;display:flex;flex-direction:column;align-items:center}
-    .container{width:100%;max-width:1000px}
-    header{text-align:center;margin-bottom:20px;padding:15px;color:white;width:100%}
-    header h1{font-size:1.8rem;margin-bottom:8px;text-shadow:2px 2px 4px rgba(0,0,0,.2)}
-    header p{font-size:1rem;opacity:.9}
-    .app-container{display:grid;grid-template-columns:1fr;gap:15px;width:100%}
-    @media (min-width:768px){.app-container{grid-template-columns:1fr 1fr} header h1{font-size:2.5rem} header p{font-size:1.2rem}}
-    .card{background:white;border-radius:12px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.1)}
-    .card-title{font-size:1.3rem;margin-bottom:15px;color:#2575fc;display:flex;align-items:center;justify-content:space-between}
-    .card-title i{margin-right:10px}
-    .form-group{margin-bottom:12px}
-    label{display:block;margin-bottom:5px;font-weight:500;font-size:.9rem}
-    input,select,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:1rem}
-    button{background:#2575fc;color:white;border:none;padding:12px 20px;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;transition:background .3s;width:100%;margin-top:5px}
-    button:hover{background:#1c64e0}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    :root{--brand:#2575fc;--ok:#2ecc71;--warn:#f39c12;--bad:#e74c3c}
+    body{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);min-height:100vh;color:#1f2937;padding:12px;display:flex;flex-direction:column;align-items:center}
+    .container{width:100%;max-width:960px}
+    header{text-align:center;margin-bottom:14px;color:white}
+    header h1{font-size:1.8rem;margin-bottom:6px;text-shadow:0 2px 10px rgba(0,0,0,.25)}
+    header p{opacity:.95}
+    .tabs{position:sticky;top:0;z-index:10;display:flex;background:#f8f9fa;border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 3px 12px rgba(0,0,0,.08)}
+    .tab{flex:1;padding:12px 10px;text-align:center;cursor:pointer;font-weight:600}
+    .tab.active{background:var(--brand);color:white}
+    .app-container{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:760px){.app-container{grid-template-columns:1fr 1fr} header h1{font-size:2.2rem}}
+    .card{background:white;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+    .card-title{display:flex;align-items:center;justify-content:space-between;color:var(--brand);font-size:1.1rem;margin-bottom:12px}
+    .form-group{margin-bottom:10px}
+    label{display:block;margin-bottom:6px;font-weight:600;font-size:.95rem}
+    input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:1rem;min-height:44px}
+    button{background:var(--brand);color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-weight:700;min-height:44px}
+    button:hover{filter:brightness(.98)}
+    .btn-secondary{background:#6c757d}
+    .btn-danger{background:var(--bad)}
+    .btn-success{background:var(--ok)}
     .summary-card{background:linear-gradient(135deg,#36d1dc 0%,#5b86e5 100%);color:white}
-    .summary-item{display:flex;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.3)}
-    .summary-item:last-child{border-bottom:none;font-weight:bold;font-size:1.1rem}
-    .transaction-list{max-height:300px;overflow-y:auto}
-    .transaction-item{display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid #eee;font-size:.9rem}
-    .transaction-item:last-child{border-bottom:none}
-    .income{color:#2ecc71}
-    .expense{color:#e74c3c}
-    .transaction-title{display:flex;align-items:center}
-    .transaction-title i{margin-right:8px;font-size:.9rem}
-    .actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
-    @media (min-width:480px){.actions{grid-template-columns:1fr 1fr}}
-    .btn-secondary{background:#6c757d}.btn-secondary:hover{background:#5a6268}
-    .btn-danger{background:#e74c3c}.btn-danger:hover{background:#c0392b}
-    .btn-success{background:#2ecc71}.btn-success:hover{background:#27ae60}
-    .notification{position:fixed;top:20px;right:20px;padding:12px 20px;background:#2ecc71;color:white;border-radius:8px;box-shadow:0 5px 15px rgba(0,0,0,.2);transform:translateX(100%);transition:transform .3s;z-index:1000}
-    .notification.show{transform:translateX(0)}
-    .tabs{display:flex;margin-bottom:15px;background:#f8f9fa;border-radius:8px;overflow:hidden}
-    .tab{flex:1;padding:10px;text-align:center;cursor:pointer;transition:background .3s;font-size:.9rem}
-    .tab.active{background:#2575fc;color:white;font-weight:bold}
-    .tab-content{display:none}
-    .tab-content.active{display:block}
-    .category-badges{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
-    @media (min-width:480px){.category-badges{grid-template-columns:1fr 1fr}}
-    .category-badge{background:#f8f9fa;border-radius:8px;padding:12px;display:flex;flex-direction:column}
+    .summary-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.35)}
+    .summary-item:last-child{border-bottom:none}
+    .transaction-list{max-height:360px;overflow-y:auto}
+    .transaction-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;font-size:.95rem}
+    .income{color:var(--ok)} .expense{color:var(--bad)}
+    .category-badges{display:grid;grid-template-columns:1fr;gap:10px}
+    @media (min-width:520px){.category-badges{grid-template-columns:1fr 1fr}}
+    .category-badge{background:#f8f9fa;border-radius:12px;padding:12px}
     .category-header{display:flex;justify-content:space-between;margin-bottom:8px}
-    .category-name{font-weight:bold}
-    .category-amount{font-size:.9rem}
-    .progress-bar{height:10px;background:#e9ecef;border-radius:5px;overflow:hidden}
-    .progress{height:100%;border-radius:5px}
-    .progress-safe{background:#2ecc71}
-    .progress-warning{background:#f39c12}
-    .progress-danger{background:#e74c3c}
-    .category-budget{display:flex;justify-content:space-between;margin-top:5px;font-size:.8rem;color:#6c757d}
-    .add-category-btn{background:transparent;color:#2575fc;border:1px dashed #2575fc;padding:8px;margin-top:10px}
-    .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
-    .modal-content{background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
-    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
-    .close-modal{background:none;border:none;font-size:1.5rem;color:#6c757d;width:auto}
-    .signed-out .app-container{display:none} /* hide app until signed in */
+    .progress-bar{height:10px;background:#e9ecef;border-radius:6px;overflow:hidden}
+    .progress{height:100%}
+    .progress-safe{background:var(--ok)} .progress-warning{background:var(--warn)} .progress-danger{background:var(--bad)}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
+    .modal-content{background:white;border-radius:14px;padding:16px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .close-modal{background:none;border:none;font-size:1.6rem;color:#6c757d}
+    .notification{position:fixed;top:18px;right:18px;background:var(--ok);color:white;padding:12px 16px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.25);transform:translateX(140%);transition:transform .3s;z-index:1100}
+    .notification.show{transform:translateX(0)}
   </style>
 </head>
-<body class="signed-out">
+<body>
   <div class="container">
     <header>
       <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
-      <p>Realtime for you + your partner (Firebase)</p>
+      <p>Open your invite link on any device. No sign-in prompts.</p>
     </header>
 
-    <!-- Signed-out banner (always visible) -->
-    <div id="signed-out-banner" style="max-width:1000px;margin:10px auto 15px; display:none;">
-      <div style="background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:12px;border-radius:8px;">
-        <b>You’re signed out.</b>
-        <button id="banner-signin" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#2575fc;color:white;cursor:pointer;">
-          Sign in with Email
-        </button>
-        <button id="banner-paste" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#6c757d;color:white;cursor:pointer;">
-          Paste sign-in link
-        </button>
+    <!-- Invite helper (only shown when no ?h=...) -->
+    <div id="invite-helper" class="card" style="display:none">
+      <h2 class="card-title"><i class="fa-solid fa-link"></i> Create a shared space</h2>
+      <p>Tap the button to create a private invite link. Anyone with the link shares the same budget space.</p>
+      <div style="display:grid;gap:10px;margin-top:10px;">
+        <button id="create-link" class="btn-success"><i class="fa-solid fa-wand-magic-sparkles"></i> Create invite link</button>
+        <input id="invite-url" readonly style="display:none"/>
+        <button id="copy-link" class="btn-secondary" style="display:none"><i class="fa-solid fa-copy"></i> Copy link</button>
       </div>
     </div>
 
@@ -95,7 +79,7 @@
     <div class="app-container">
       <!-- Transactions -->
       <div class="card tab-content active" id="transactions-tab">
-        <h2 class="card-title"><i class="fas fa-plus-circle"></i> Add Transaction</h2>
+        <h2 class="card-title"><span><i class="fas fa-plus-circle"></i> Add Transaction</span></h2>
         <form id="transaction-form">
           <div class="form-group">
             <label for="type">Type</label>
@@ -112,7 +96,7 @@
           </div>
           <div class="form-group">
             <label for="amount">Amount ($)</label>
-            <input type="number" id="amount" placeholder="Enter amount" required min="0" step="0.01">
+            <input type="number" id="amount" min="0" step="0.01" required>
           </div>
           <div class="form-group">
             <label for="date">Date</label>
@@ -120,9 +104,9 @@
           </div>
           <div class="form-group">
             <label for="description">Description</label>
-            <input type="text" id="description" placeholder="Enter description">
+            <input type="text" id="description" placeholder="Optional">
           </div>
-          <button type="submit">Add Transaction</button>
+          <button type="submit" class="btn-success">Add Transaction</button>
         </form>
       </div>
 
@@ -132,13 +116,17 @@
         <div class="summary-item"><span>Total Income:</span><span id="total-income">$0.00</span></div>
         <div class="summary-item"><span>Total Expenses:</span><span id="total-expenses">$0.00</span></div>
         <div class="summary-item"><span>Remaining Budget:</span><span id="remaining-budget">$0.00</span></div>
+        <div style="background:white;border-radius:12px;margin-top:12px;padding:12px;height:280px;">
+          <canvas id="summary-chart"></canvas>
+          <div id="summary-table" style="overflow-x:auto;margin-top:10px;"></div>
+        </div>
       </div>
 
       <!-- Categories -->
       <div class="card tab-content" id="categories-tab">
         <h2 class="card-title">
           <span><i class="fas fa-tags"></i> Categories</span>
-          <button class="add-category-btn" id="add-category-btn"><i class="fas fa-plus"></i> Add New</button>
+          <button class="add-category-btn" id="add-category-btn" style="width:auto"><i class="fas fa-plus"></i> Add New</button>
         </h2>
         <div class="category-badges" id="category-badges"></div>
       </div>
@@ -146,11 +134,8 @@
       <!-- Manage -->
       <div class="card tab-content" id="manage-tab">
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
-        <p>Shared space ID (give this to your partner): <b id="household-label"></b></p>
-        <div class="actions">
-          <button id="signin-btn" class="btn-success"><i class="fa-solid fa-right-to-bracket"></i> Sign in with Email</button>
-          <button id="signin-paste-btn" class="btn-secondary"><i class="fa-solid fa-clipboard-check"></i> Paste sign-in link</button>
-          <button id="signout-btn" class="btn-secondary"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+        <p>Shared space ID: <b id="household-label"></b></p>
+        <div class="actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
           <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
           <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
         </div>
@@ -160,10 +145,7 @@
       <div class="card">
         <h2 class="card-title"><i class="fas fa-list"></i> Recent Transactions</h2>
         <div class="transaction-list" id="transaction-list">
-          <div class="transaction-item">
-            <div class="transaction-title">No transactions yet</div>
-            <div class="transaction-amount">$0.00</div>
-          </div>
+          <div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>
         </div>
       </div>
     </div>
@@ -177,10 +159,7 @@
         <button class="close-modal" data-close="#category-modal" aria-label="Close">&times;</button>
       </div>
       <form id="category-form">
-        <div class="form-group">
-          <label for="category-name">Category Name</label>
-          <input type="text" id="category-name" required>
-        </div>
+        <div class="form-group"><label for="category-name">Category Name</label><input type="text" id="category-name" required></div>
         <div class="form-group">
           <label for="category-type">Type</label>
           <select id="category-type" required>
@@ -188,10 +167,7 @@
             <option value="income">Income</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="category-budget">Monthly Budget (expense) / Target (income)</label>
-          <input type="number" id="category-budget" min="0" step="0.01">
-        </div>
+        <div class="form-group"><label for="category-budget">Monthly Budget (expense) / Target (income)</label><input type="number" id="category-budget" min="0" step="0.01"></div>
         <button type="submit" class="btn-success">Save Category</button>
       </form>
     </div>
@@ -208,10 +184,7 @@
         <input type="hidden" id="edit-category-id">
         <input type="hidden" id="edit-old-name">
         <input type="hidden" id="edit-old-type">
-        <div class="form-group">
-          <label for="edit-category-name">Name</label>
-          <input type="text" id="edit-category-name" required>
-        </div>
+        <div class="form-group"><label for="edit-category-name">Name</label><input type="text" id="edit-category-name" required></div>
         <div class="form-group">
           <label for="edit-category-type">Type</label>
           <select id="edit-category-type" required>
@@ -219,10 +192,7 @@
             <option value="income">Income</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="edit-category-budget">Monthly Amount / Budget</label>
-          <input type="number" id="edit-category-budget" min="0" step="0.01">
-        </div>
+        <div class="form-group"><label for="edit-category-budget">Monthly Amount / Budget</label><input type="number" id="edit-category-budget" min="0" step="0.01"></div>
         <button type="submit" class="btn-success">Save</button>
       </form>
     </div>
@@ -240,6 +210,30 @@
     </div>
   </div>
 
+  <!-- Transaction Edit Modal -->
+  <div class="modal" id="tx-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Transaction</h2>
+        <button class="close-modal" data-close="#tx-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="tx-form">
+        <input type="hidden" id="tx-id">
+        <div class="form-group"><label for="tx-type">Type</label>
+          <select id="tx-type" required><option value="income">Income</option><option value="expense">Expense</option></select>
+        </div>
+        <div class="form-group"><label for="tx-category">Category</label>
+          <select id="tx-category" required><option value="">Select a category</option></select>
+        </div>
+        <div class="form-group"><label for="tx-amount">Amount ($)</label><input type="number" id="tx-amount" min="0" step="0.01" required></div>
+        <div class="form-group"><label for="tx-date">Date</label><input type="date" id="tx-date" required></div>
+        <div class="form-group"><label for="tx-desc">Description</label><input type="text" id="tx-desc" placeholder="Description"></div>
+        <button type="submit" class="btn-success">Save</button>
+        <button type="button" id="tx-delete" class="btn-danger" style="margin-top:8px;">Delete</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Household Switcher Modal -->
   <div class="modal" id="household-modal">
     <div class="modal-content">
@@ -249,54 +243,10 @@
       </div>
       <form id="household-form">
         <div class="form-group">
-          <label for="household-input">Enter a shared ID (e.g., <code>our-home-01</code>)</label>
-          <input type="text" id="household-input" placeholder="my-family-01" required>
+          <label for="household-input">Enter a shared ID (e.g., <code>hh_abc123…</code>)</label>
+          <input type="text" id="household-input" placeholder="hh_..." required>
         </div>
         <button type="submit" class="btn-success">Switch</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Email Sign-in Modal -->
-  <div class="modal" id="email-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Sign in via Email Link</h2>
-        <button class="close-modal" data-close="#email-modal" aria-label="Close">&times;</button>
-      </div>
-      <form id="email-form">
-        <div class="form-group">
-          <label for="email-input">Your email</label>
-          <input type="email" id="email-input" placeholder="you@example.com" required>
-        </div>
-        <button type="submit" class="btn-success">Send Sign-in Link</button>
-        <p style="margin-top:10px;color:#6c757d;font-size:.9rem;">
-          We’ll email you a secure link. Open it on this device to finish signing in.
-        </p>
-      </form>
-    </div>
-  </div>
-
-  <!-- Paste Link Sign-in Modal -->
-  <div class="modal" id="paste-link-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Finish Sign-in (Paste Link)</h2>
-        <button class="close-modal" data-close="#paste-link-modal" aria-label="Close">&times;</button>
-      </div>
-      <form id="paste-link-form">
-        <div class="form-group">
-          <label for="paste-email">Your email</label>
-          <input type="email" id="paste-email" placeholder="you@example.com" required>
-        </div>
-        <div class="form-group">
-          <label for="paste-url">Paste the full link from the email</label>
-          <input type="url" id="paste-url" placeholder="https://...mode=signIn&oobCode=..." required>
-        </div>
-        <button type="submit" class="btn-success">Finish Sign-in</button>
-        <p style="margin-top:10px;color:#6c757d;font-size:.9rem;">
-          Tip: copy the email button’s link address and paste it here if the mail app opens a different browser.
-        </p>
       </form>
     </div>
   </div>
@@ -304,110 +254,85 @@
   <!-- Firebase (module) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      isSignInWithEmailLink,
-      sendSignInLinkToEmail,
-      signInWithEmailLink,
-      onAuthStateChanged,
-      signOut,
-      setPersistence,
-      browserLocalPersistence
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
       onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ✅ YOUR REAL CONFIG HERE
+    // === CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
       authDomain: "budget-beabb.firebaseapp.com",
       projectId: "budget-beabb",
       appId: "1:222008362126:web:70db15c87c13657d16b5df"
-      // (optional) storageBucket, messagingSenderId okay to include
     };
 
-    // Create app & services synchronously (no top-level await)
+    // App & services
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // Expose wrappers immediately
-    window.firebaseAuth = {
-      sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
-      signOut: () => signOut(auth),
-      onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
-      currentUser: () => auth.currentUser
-    };
-
-    // Firestore helpers + household handles
-    async function ensureHouseholdDoc(householdId){
-      const ref = doc(db, "households", householdId);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
-      return ref;
-    }
-    async function getHouseholdHandles(householdId){
-      const householdRef = await ensureHouseholdDoc(householdId);
-      return {
-        householdId,
-        householdRef,
-        categoriesCol: collection(householdRef, "categories"),
-        transactionsCol: collection(householdRef, "transactions"),
-      };
-    }
+    // Expose minimal helpers
     window.$rt = {
-      db, getHouseholdHandles,
-      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
-      getDocs, where, writeBatch
-    };
-    window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
-
-    // Finish email-link sign-in if landing from email
-    async function initFirebaseAuthFlows() {
-      try { await setPersistence(auth, browserLocalPersistence); } catch(e){ console.error("setPersistence failed", e); }
-
-      try {
-        console.log("[auth] location:", window.location.href);
-        const looksLikeEmailLink = isSignInWithEmailLink(auth, window.location.href);
-        console.log("[auth] isSignInWithEmailLink:", looksLikeEmailLink);
-        if (looksLikeEmailLink) {
-          let email = window.localStorage.getItem('pendingEmail');
-          if (!email) email = window.prompt('Confirm your email to finish sign-in');
-          if (email) {
-            await signInWithEmailLink(auth, email, window.location.href);
-            window.localStorage.removeItem('pendingEmail');
-            window.history.replaceState({}, document.title, window.location.pathname); // clean URL
-          }
-        }
-      } catch (err) {
-        console.error('Email-link sign-in failed:', err);
-        window.addEventListener('DOMContentLoaded', ()=>{
-          const n = document.getElementById('notification');
-          if (n) { n.textContent = `Auth error: ${err.code || ''} ${err.message || err}`; n.classList.add('show'); }
-        });
+      db,
+      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch,
+      getHouseholdHandles: async (householdId) => {
+        const householdRef = doc(db, "households", householdId);
+        const snap = await getDoc(householdRef);
+        if (!snap.exists()) await setDoc(householdRef, { createdAt: Date.now() });
+        return {
+          householdId,
+          householdRef,
+          categoriesCol: collection(householdRef, "categories"),
+          transactionsCol: collection(householdRef, "transactions"),
+        };
       }
-      console.log("[firebase] auth ready, currentUser:", auth.currentUser?.email || null);
+    };
+
+    // Anonymous auth (silent)
+    async function initAuth() {
+      try { await setPersistence(auth, browserLocalPersistence); } catch(e){}
+      if (!auth.currentUser) {
+        try { await signInAnonymously(auth); } catch (e) { console.error("Anonymous sign-in failed", e); }
+      }
     }
-    initFirebaseAuthFlows();
-
-    // Helper for “Paste link” fallback
-    window.finishEmailLinkSignIn = async (email, link) => {
-      try {
-        await signInWithEmailLink(auth, email, link);
-        window.localStorage.removeItem('pendingEmail');
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return { ok: true };
-      } catch (e) {
-        return { ok: false, error: e };
-      }
-    };
+    await initAuth();
+    window.firebaseAuth = { onAuthStateChanged: (cb)=>onAuthStateChanged(auth, cb), user: ()=>auth.currentUser };
   </script>
 
   <!-- App logic -->
   <script>
   document.addEventListener('DOMContentLoaded', function () {
+    const BASE_URL = "https://avillamil0420-coder.github.io/budget-realtime/";
+    const qs = new URLSearchParams(location.search);
+    let invitedHousehold = qs.get('h') || '';
+
+    const inviteHelper = document.getElementById('invite-helper');
+    const createBtn = document.getElementById('create-link');
+    const inviteUrl = document.getElementById('invite-url');
+    const copyBtn = document.getElementById('copy-link');
+
+    // Invite link helper
+    function randomId(len=22){
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let s='hh_';
+      for(let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
+      return s;
+    }
+    function showInviteCreator(){
+      inviteHelper.style.display = 'block';
+      createBtn.onclick = async ()=>{
+        const hid = randomId(22);
+        const url = `${BASE_URL}?h=${encodeURIComponent(hid)}`;
+        inviteUrl.value = url; inviteUrl.style.display='block'; copyBtn.style.display='block';
+        copyBtn.onclick = async ()=> {
+          await navigator.clipboard.writeText(url);
+          showNotification('Invite link copied!');
+        };
+      };
+    }
+
     const hhLabel = document.getElementById('household-label');
     const typeSelect = document.getElementById('type');
     const categorySelect = document.getElementById('category');
@@ -441,7 +366,7 @@
       if (!n) return;
       n.textContent = message;
       n.classList.add('show');
-      setTimeout(()=> n.classList.remove('show'), 3000);
+      setTimeout(()=> n.classList.remove('show'), 2600);
     }
 
     // ====== STATE ======
@@ -465,7 +390,7 @@
       transactions = [];
       renderTransactions();
       renderCategoryBadges();
-      updateSummary();
+      updateSummary(); renderSummaryChart(); renderSummaryTable();
 
       handles = await getHouseholdHandles(householdId);
       if (hhLabel) hhLabel.textContent = handles.householdId;
@@ -474,6 +399,8 @@
         categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         rebuildCategoryOptions();
         renderCategoryBadges();
+        renderSummaryChart();
+        renderSummaryTable();
       });
 
       unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap) => {
@@ -481,43 +408,22 @@
         renderTransactions();
         updateSummary();
         renderCategoryBadges();
+        renderSummaryChart();
+        renderSummaryTable();
       });
     }
 
-    // ====== AUTH GATE (GUARDED) ======
-    const initAuthListener = () => {
-      if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
-        window.firebaseAuth.onAuthStateChanged(async (user)=>{
-          const banner = document.getElementById('signed-out-banner');
-          const bannerBtn = document.getElementById('banner-signin');
-          const bannerPaste = document.getElementById('banner-paste');
-
-          if (user) {
-            await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
-            document.body.classList.remove('signed-out');
-            if (banner) banner.style.display = 'none';
-            showNotification(`Signed in as ${user.email || 'user'}`);
-          } else {
-            if (typeof unsubCats === 'function') unsubCats();
-            if (typeof unsubTx === 'function') unsubTx();
-            categories = []; transactions = [];
-            renderTransactions(); renderCategoryBadges(); updateSummary();
-            document.body.classList.add('signed-out');
-
-            if (banner) banner.style.display = 'block';
-            if (bannerBtn) bannerBtn.onclick = () => openModal(document.getElementById('email-modal'));
-            if (bannerPaste) bannerPaste.onclick = () => openModal(document.getElementById('paste-link-modal'));
-
-            // Auto-open the email sign-in modal
-            openModal(document.getElementById('email-modal'));
-          }
-        });
-      } else {
-        console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
-        setTimeout(initAuthListener, 1500);
-      }
-    };
-    initAuthListener();
+    // Start when auth is ready
+    if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
+      window.firebaseAuth.onAuthStateChanged(async ()=>{
+        if (invitedHousehold) {
+          await bindHousehold(invitedHousehold);
+        } else {
+          // No invite in URL: show link creator
+          showInviteCreator();
+        }
+      });
+    }
 
     // ====== UI BUILDERS ======
     function rebuildCategoryOptions() {
@@ -531,10 +437,6 @@
           categorySelect.appendChild(opt);
         }
       });
-      if (categorySelect.value) {
-        const still = [...categorySelect.options].some(o => o.value === categorySelect.value);
-        if (!still) categorySelect.value = '';
-      }
     }
     typeSelect.addEventListener('change', rebuildCategoryOptions);
 
@@ -579,10 +481,10 @@
             <span class="category-name">${category.name} <small style="color:#6c757d;">(${category.type})</small></span>
             <span class="category-amount">${headerRight}</span>
           </div>
-          <div class="progress-bar" ${hasBudget ? '' : 'style="opacity:.4;"'}>
+          <div class="progress-bar" ${hasBudget ? '' : 'style="opacity:.45;"'}>
             <div class="progress ${progressClass}" style="width:${hasBudget ? percent : 0}%"></div>
           </div>
-          <div class="category-budget">
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.85rem;color:#6c757d;">
             <span>${hasBudget ? `${percent.toFixed(0)}%` : '—'}</span>
             <span>${remainingText}</span>
           </div>
@@ -606,25 +508,27 @@
       const list = document.getElementById('transaction-list');
       if (!list) return;
       if (transactions.length === 0) {
-        list.innerHTML = `
-          <div class="transaction-item">
-            <div class="transaction-title">No transactions yet</div>
-            <div class="transaction-amount">$0.00</div>
-          </div>`;
+        list.innerHTML = `<div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>`;
         return;
       }
-      const recent = transactions.slice(0,10);
+      const recent = transactions.slice(0,12);
       list.innerHTML = recent.map(t => `
         <div class="transaction-item">
           <div class="transaction-title">
-            <i class="fas ${t.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
+            <i class="fas ${t.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}" style="margin-right:8px;"></i>
             ${t.description || 'No description'}
             <small style="color:#6c757d;margin-left:8px;">(${t.date})</small>
           </div>
-          <div class="${t.type==='income'?'income':'expense'}">
-            ${t.type==='income'?'+':'-'}$${Number(t.amount||0).toFixed(2)}
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="${t.type==='income'?'income':'expense'}">
+              ${t.type==='income'?'+':'-'}$${Number(t.amount||0).toFixed(2)}
+            </div>
+            <button class="btn-secondary tx-edit" data-id="${t.id}" style="width:auto;padding:6px 10px;">Edit</button>
           </div>
         </div>`).join('');
+      list.querySelectorAll('.tx-edit').forEach(btn=>{
+        btn.addEventListener('click', ()=> openTxModal(btn.getAttribute('data-id')));
+      });
     }
 
     function updateSummary() {
@@ -635,10 +539,70 @@
       document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
       const remainingEl = document.getElementById('remaining-budget');
       remainingEl.textContent = `$${remaining.toFixed(2)}`;
-      remainingEl.style.color = remaining < 0 ? '#e74c3c' : '#2ecc71';
+      remainingEl.style.color = remaining < 0 ? '#ffe3e3' : '#eaffea';
     }
 
-    // ====== CATEGORY: ADD ======
+    // ====== SUMMARY CHART & TABLE ======
+    function computeCategoryStats(){
+      return categories.map(c => {
+        const spent = transactions
+          .filter(t => t.category === c.name && t.type === c.type)
+          .reduce((s,t)=> s + Number(t.amount||0), 0);
+        const budget = Number(c.budget || 0);
+        const available = budget > 0 ? (budget - spent) : 0;
+        return { name: c.name, type: c.type, budget, spent, available };
+      });
+    }
+    function renderSummaryTable(){
+      const wrap = document.getElementById('summary-table');
+      if (!wrap) return;
+      const rows = computeCategoryStats().map(s => `
+        <tr>
+          <td>${s.name}</td>
+          <td>${s.type}</td>
+          <td style="text-align:right">${s.budget > 0 ? '$'+s.budget.toFixed(2) : '—'}</td>
+          <td style="text-align:right">$${s.spent.toFixed(2)}</td>
+          <td style="text-align:right">${s.budget > 0 ? '$'+Math.max(0, s.available).toFixed(2) : '—'}</td>
+        </tr>
+      `).join('');
+      wrap.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:6px;border-bottom:1px solid #eee;">Category</th>
+              <th style="text-align:left;padding:6px;border-bottom:1px solid #eee;">Type</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Budget/Target</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Spent/Received</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Available</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || `<tr><td colspan="5" style="padding:8px;color:#6c757d;">No categories yet.</td></tr>`}
+          </tbody>
+        </table>
+      `;
+    }
+    function renderSummaryChart(){
+      const canvas = document.getElementById('summary-chart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      const stats = computeCategoryStats().filter(s => s.type === 'expense' && s.budget > 0);
+      const labels = stats.map(s => s.name);
+      const spent  = stats.map(s => Math.min(s.spent, s.budget));
+      const avail  = stats.map(s => Math.max(0, s.budget - s.spent));
+      if (window.summaryChart) { window.summaryChart.destroy(); window.summaryChart = null; }
+      const ctx = canvas.getContext('2d');
+      window.summaryChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{label:'Spent',data:spent,stack:'b'},{label:'Available',data:avail,stack:'b'}] },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          scales:{ y:{beginAtZero:true,title:{display:true,text:'Amount ($)'}} },
+          plugins:{ legend:{position:'bottom'}, tooltip:{callbacks:{footer(c){const i=c[0].dataIndex;const s=stats[i];return `Budget: $${s.budget.toFixed(2)} | Spent: $${s.spent.toFixed(2)} | Available: $${Math.max(0,s.available).toFixed(2)}`;}}}}
+        }
+      });
+    }
+
+    // ====== CATEGORY ADD ======
     const categoryModal = document.getElementById('category-modal');
     document.getElementById('add-category-btn').addEventListener('click', ()=> openModal(categoryModal));
     document.getElementById('category-form').addEventListener('submit', async function(e){
@@ -646,67 +610,48 @@
       const name   = document.getElementById('category-name').value.trim();
       const type   = document.getElementById('category-type').value;
       const budget = parseFloat(document.getElementById('category-budget').value) || 0;
-
+      if (!name) return;
       const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type);
       if (exists) { showNotification('Category already exists for this type.'); return; }
-
       const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
       try {
         await addDoc(handles.categoriesCol, { name, type, budget });
-        this.reset();
-        closeModal(categoryModal);
-        showNotification('Category added!');
-      } catch (err) {
-        console.error(err);
-        showNotification(`Error saving category: ${err.code || ''} ${err.message || err}`);
-      } finally {
-        btn.disabled = false;
-      }
+        this.reset(); closeModal(categoryModal); showNotification('Category added!');
+      } catch (err) { console.error(err); showNotification(`Error: ${err.message || err}`); }
+      finally { btn.disabled = false; }
     });
 
-    // ====== CATEGORY: EDIT + CASCADE ======
+    // ====== CATEGORY EDIT (cascade) ======
     const editModal = document.getElementById('category-edit-modal');
     document.getElementById('category-edit-form').addEventListener('submit', async function(e){
       e.preventDefault();
       const id = document.getElementById('edit-category-id').value;
       const oldName = document.getElementById('edit-old-name').value;
       const oldType = document.getElementById('edit-old-type').value;
-
       const newName = document.getElementById('edit-category-name').value.trim();
       const newType = document.getElementById('edit-category-type').value;
       const newBudget = parseFloat(document.getElementById('edit-category-budget').value) || 0;
-
       const dup = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
-      if (dup) { showNotification('Another category with this name & type already exists.'); return; }
-
+      if (dup) { showNotification('Another category with this name & type exists.'); return; }
       const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
       try {
-        await updateDoc(doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
-
+        await window.$rt.updateDoc(window.$rt.doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
         const changed = (oldName !== newName) || (oldType !== newType);
         if (changed) {
-          const q = window.$rt.query(
-            handles.transactionsCol,
-            window.$rt.where('category', '==', oldName),
-            window.$rt.where('type', '==', oldType)
-          );
-          const snap = await getDocs(q);
+          const q = window.$rt.query(handles.transactionsCol,
+            window.$rt.where('category','==',oldName),
+            window.$rt.where('type','==',oldType));
+          const snap = await window.$rt.getDocs(q);
           if (!snap.empty) {
-            const batch = writeBatch(window.$rt.db);
-            snap.forEach(docSnap => batch.update(docSnap.ref, { category: newName, type: newType }));
+            const batch = window.$rt.writeBatch(window.$rt.db);
+            snap.forEach(d => batch.update(d.ref, { category: newName, type: newType }));
             await batch.commit();
           }
         }
-        closeModal(editModal);
-        showNotification('Category updated!');
-      } catch (err) {
-        console.error(err);
-        showNotification(`Error updating category: ${err.code || ''} ${err.message || err}`);
-      } finally {
-        btn.disabled = false;
-      }
+        closeModal(editModal); showNotification('Category updated!');
+      } catch (err) { console.error(err); showNotification(`Error: ${err.message || err}`); }
+      finally { btn.disabled = false; }
     });
-
     function openEditModal(id){
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
@@ -719,27 +664,24 @@
       openModal(editModal);
     }
 
-    // ====== CATEGORY: DETAIL ======
+    // ====== CATEGORY DETAIL ======
     const detailModal = document.getElementById('category-detail-modal');
     const detailTitle = document.getElementById('detail-title');
     const detailItems = document.getElementById('detail-items');
     const detailSummary = document.getElementById('detail-summary');
-
     function openDetailModal(id){
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
       const items = transactions.filter(t => t.category === cat.name && t.type === cat.type);
       const total = items.reduce((s,t)=> s + Number(t.amount||0), 0);
       const budget = cat.budget || 0;
-
       detailTitle.textContent = `${cat.name} (${cat.type})`;
       detailSummary.innerHTML = `
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div><strong>Total ${cat.type === 'expense' ? 'spent' : 'received'}:</strong> $${total.toFixed(2)}</div>
           <div><strong>${cat.type === 'expense' ? 'Budget' : 'Target'}:</strong> ${budget > 0 ? '$'+budget.toFixed(2) : '—'}</div>
           ${budget > 0 ? `<div><strong>${cat.type === 'expense' ? 'Left' : 'To target'}:</strong> $${(budget - total).toFixed(2)}</div>` : ''}
-        </div>
-      `;
+        </div>`;
       if (items.length === 0) {
         detailItems.innerHTML = `<p style="margin-top:10px;">No ${cat.type} entries in this category yet.</p>`;
       } else {
@@ -751,23 +693,83 @@
                 <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
                 ${item.description || 'No description'} <small style="color:#6c757d;margin-left:8px;">(${item.date})</small>
               </div>
-              <div class="${item.type==='income'?'income':'expense'}">
-                ${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div class="${item.type==='income'?'income':'expense'}">
+                  ${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}
+                </div>
+                <button class="btn-secondary tx-edit" data-id="${item.id}" style="width:auto;padding:6px 10px;">Edit</button>
               </div>
-            </div>
-          `).join('');
+            </div>`).join('');
+        detailItems.querySelectorAll('.tx-edit').forEach(btn=>{
+          btn.addEventListener('click', ()=> openTxModal(btn.getAttribute('data-id')));
+        });
       }
       openModal(detailModal);
     }
 
-    // ====== TRANSACTION: ADD ======
+    // ====== TRANSACTION EDIT ======
+    function fillTxCategoryOptions(typeValue, selectEl, preselectValue){
+      while (selectEl.options.length > 1) selectEl.remove(1);
+      categories.forEach(c => {
+        if (c.type === typeValue) {
+          const opt = document.createElement('option');
+          opt.value = c.name; opt.textContent = c.name;
+          selectEl.appendChild(opt);
+        }
+      });
+      if (preselectValue) selectEl.value = preselectValue;
+    }
+    function openTxModal(id){
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+      document.getElementById('tx-id').value = id;
+      const typeSel = document.getElementById('tx-type');
+      const catSel  = document.getElementById('tx-category');
+      typeSel.value = tx.type;
+      fillTxCategoryOptions(tx.type, catSel, tx.category);
+      document.getElementById('tx-amount').value = Number(tx.amount||0).toFixed(2);
+      document.getElementById('tx-date').value = tx.date;
+      document.getElementById('tx-desc').value = tx.description || '';
+      openModal(document.getElementById('tx-modal'));
+    }
+    document.getElementById('tx-type').addEventListener('change', (e)=>{
+      fillTxCategoryOptions(e.target.value, document.getElementById('tx-category'));
+    });
+    document.getElementById('tx-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const id   = document.getElementById('tx-id').value;
+      const type = document.getElementById('tx-type').value;
+      const cat  = document.getElementById('tx-category').value;
+      const amt  = parseFloat(document.getElementById('tx-amount').value);
+      const date = document.getElementById('tx-date').value;
+      const desc = (document.getElementById('tx-desc').value || '').trim();
+      if (!cat || !isFinite(amt)) { showNotification('Please enter valid values.'); return; }
+      try{
+        await window.$rt.updateDoc(window.$rt.doc(handles.transactionsCol, id),
+          { type, category: cat, amount: Number(amt.toFixed(2)), date, description: desc });
+        closeModal(document.getElementById('tx-modal'));
+        showNotification('Transaction updated.');
+      }catch(err){ console.error(err); showNotification(`Update failed: ${err.message || err}`); }
+    });
+    document.getElementById('tx-delete').addEventListener('click', async ()=>{
+      const id = document.getElementById('tx-id').value;
+      if (!id) return;
+      if (!confirm('Delete this transaction?')) return;
+      try{
+        await window.$rt.deleteDoc(window.$rt.doc(handles.transactionsCol, id));
+        closeModal(document.getElementById('tx-modal'));
+        showNotification('Transaction deleted.');
+      }catch(err){ console.error(err); showNotification(`Delete failed: ${err.message || err}`); }
+    });
+
+    // ====== TRANSACTION ADD ======
     document.getElementById('transaction-form').addEventListener('submit', async function(e){
       e.preventDefault();
+      if (!handles) { showNotification('No household bound. Use an invite link.'); return; }
       const selectedCategory = categorySelect.value;
       if (!selectedCategory) { showNotification('Please choose a category first.'); return; }
       const amountVal = parseFloat(document.getElementById('amount').value);
       if (!isFinite(amountVal) || amountVal < 0) { showNotification('Enter a valid amount (>= 0).'); return; }
-
       const transaction = {
         type: typeSelect.value,
         category: selectedCategory,
@@ -779,40 +781,24 @@
       const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
       try {
         await addDoc(handles.transactionsCol, transaction);
-        this.reset();
-        if (dateEl) dateEl.valueAsDate = new Date();
-        typeSelect.value = 'income';
-        rebuildCategoryOptions();
+        this.reset(); if (dateEl) dateEl.valueAsDate = new Date(); typeSelect.value = 'income'; rebuildCategoryOptions();
         showNotification('Transaction added!');
-      } catch (err) {
-        console.error(err);
-        showNotification(`Error adding transaction: ${err.code || ''} ${err.message || err}`);
-      } finally {
-        btn.disabled = false;
-      }
+      } catch (err) { console.error(err); showNotification(`Error adding: ${err.message || err}`); }
+      finally { btn.disabled = false; }
     });
 
-    // ====== CLEAR ALL (DANGER) ======
+    // ====== CLEAR ALL ======
     document.getElementById('clear-btn').addEventListener('click', async function(){
+      if (!handles) return;
       if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
       try{
-        const delCat = async () => {
-          const ids = categories.map(c=>c.id);
-          for (const id of ids) { await deleteDoc(doc(handles.categoriesCol, id)); }
-        };
-        const delTx = async () => {
-          const ids = transactions.map(t=>t.id);
-          for (const id of ids) { await deleteDoc(doc(handles.transactionsCol, id)); }
-        };
-        await delTx(); await delCat();
-        showNotification('All data cleared for this household.');
-      } catch(err){
-        console.error(err);
-        showNotification(`Error clearing data: ${err.code || ''} ${err.message || err}`);
-      }
+        const delCat = async () => { for (const c of categories) await deleteDoc(doc(handles.categoriesCol, c.id)); };
+        const delTx = async () => { for (const t of transactions) await deleteDoc(doc(handles.transactionsCol, t.id)); };
+        await delTx(); await delCat(); showNotification('All data cleared for this household.');
+      }catch(err){ console.error(err); showNotification(`Error clearing: ${err.message || err}`); }
     });
 
-    // ====== HOUSEHOLD SWITCHER ======
+    // ====== HOUSEHOLD SWITCH ======
     const householdModal = document.getElementById('household-modal');
     document.getElementById('switch-household-btn').addEventListener('click', ()=> {
       const input = document.getElementById('household-input');
@@ -823,73 +809,11 @@
       e.preventDefault();
       const newId = (document.getElementById('household-input').value || '').trim();
       if (!newId) return;
+      history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(newId)}`);
+      invitedHousehold = newId;
       await bindHousehold(newId);
       closeModal(householdModal);
       showNotification(`Switched to: ${newId}`);
-    });
-
-    // ====== EMAIL LINK SIGN-IN UI ======
-    const emailModal = document.getElementById('email-modal');
-    document.getElementById('signin-btn').addEventListener('click', () => openModal(emailModal));
-    document.getElementById('signin-paste-btn').addEventListener('click', () => openModal(document.getElementById('paste-link-modal')));
-    // banner shortcuts
-    document.getElementById('banner-signin').addEventListener('click', () => openModal(emailModal));
-    document.getElementById('banner-paste').addEventListener('click', () => openModal(document.getElementById('paste-link-modal')));
-
-    document.getElementById('email-form').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const email = (document.getElementById('email-input').value || '').trim();
-      if (!email) return;
-
-      // IMPORTANT: lock to your GitHub Pages URL (with trailing slash)
-      const actionCodeSettings = {
-        url: "https://avillamil0420-coder.github.io/budget-realtime/",
-        handleCodeInApp: true
-      };
-
-      try{
-        await window.firebaseAuth.sendSignInLink(email, actionCodeSettings);
-        window.localStorage.setItem('pendingEmail', email);
-        closeModal(emailModal);
-        showNotification('Sign-in link sent! Check your email.');
-      }catch(err){
-        console.error(err);
-        showNotification(`Error sending link: ${err.code || ''} ${err.message || err}`);
-      }
-    });
-
-    // Paste link fallback
-    document.getElementById('paste-link-form').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const email = (document.getElementById('paste-email').value || '').trim();
-      const link  = (document.getElementById('paste-url').value || '').trim();
-      if (!email || !link) return;
-      const btn = e.submitter || e.target.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
-      try {
-        const res = await window.finishEmailLinkSignIn(email, link);
-        if (res.ok) {
-          closeModal(document.getElementById('paste-link-modal'));
-          showNotification(`Signed in as ${email}`);
-        } else {
-          console.error(res.error);
-          showNotification(`Sign-in failed: ${res.error.code || ''} ${res.error.message || res.error}`);
-        }
-      } catch(err) {
-        console.error(err);
-        showNotification(`Sign-in failed: ${err.code || ''} ${err.message || err}`);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    });
-
-    document.getElementById('signout-btn').addEventListener('click', async ()=>{
-      try{
-        await window.firebaseAuth.signOut();
-        showNotification('Signed out.');
-      }catch(err){
-        console.error(err);
-        showNotification(`Error signing out: ${err.code || ''} ${err.message || err}`);
-      }
     });
 
   });
