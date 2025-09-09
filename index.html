@@ -265,39 +265,71 @@
   </div>
 
   <!-- Firebase (module) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      isSignInWithEmailLink,
-      sendSignInLinkToEmail,
-      signInWithEmailLink,
-      onAuthStateChanged,
-      signOut,
-      setPersistence,
-      browserLocalPersistence
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
-      onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth,
+    isSignInWithEmailLink,
+    sendSignInLinkToEmail,
+    signInWithEmailLink,
+    onAuthStateChanged,
+    signOut,
+    setPersistence,
+    browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+    onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔧 Replace with your Firebase config
-    const firebaseConfig = {
+  // ✅ YOUR REAL CONFIG HERE
+  const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
       authDomain: "budget-beabb.firebaseapp.com",
       projectId: "budget-beabb",
       appId: "1:222008362126:web:70db15c87c13657d16b5df"
-    };
+    // (optional) storageBucket, messagingSenderId okay to include
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  // create app & services synchronously (no await here)
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
 
-    // Persist session in this browser
-    await setPersistence(auth, browserLocalPersistence);
+  // expose wrappers IMMEDIATELY so the page can bind listeners
+  window.firebaseAuth = {
+    sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
+    signOut: () => signOut(auth),
+    onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
+    currentUser: () => auth.currentUser
+  };
+  window.$rt = {
+    db,
+    getHouseholdHandles: async (householdId) => {
+      const ref  = doc(db, "households", householdId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
+      return {
+        householdId,
+        householdRef: ref,
+        categoriesCol: collection(ref, "categories"),
+        transactionsCol: collection(ref, "transactions"),
+      };
+    },
+    addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+    getDocs, where, writeBatch
+  };
+  window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
 
-    // Complete email-link sign-in if arriving from the email
+  // do the async bits safely inside a function (no top-level await)
+  async function initFirebaseAuthFlows() {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (e) {
+      console.error("setPersistence failed", e);
+    }
+
+    // Complete email link sign-in if we arrived via a magic link
     try {
       if (isSignInWithEmailLink(auth, window.location.href)) {
         let email = window.localStorage.getItem('pendingEmail');
@@ -305,54 +337,26 @@
         if (email) {
           await signInWithEmailLink(auth, email, window.location.href);
           window.localStorage.removeItem('pendingEmail');
-          // Clean URL
+          // clean the URL
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
     } catch (err) {
       console.error('Email-link sign-in failed:', err);
+      // surface a toast once DOM is ready
       window.addEventListener('DOMContentLoaded', ()=>{
         const n = document.getElementById('notification');
         if (n) { n.textContent = `Auth error: ${err.code || ''} ${err.message || err}`; n.classList.add('show'); }
       });
     }
 
-    // Ensure a household doc exists
-    async function ensureHouseholdDoc(householdId){
-      const ref = doc(db, "households", householdId);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
-      return ref;
-    }
-    // Build collection handles for a household
-    async function getHouseholdHandles(householdId){
-      const householdRef = await ensureHouseholdDoc(householdId);
-      return {
-        householdId,
-        householdRef,
-        categoriesCol: collection(householdRef, "categories"),
-        transactionsCol: collection(householdRef, "transactions"),
-      };
-    }
+    // small breadcrumb for debugging
+    console.log("[firebase] auth ready, currentUser:", auth.currentUser?.email || null);
+  }
 
-    // Expose small wrappers for non-module script
-    window.firebaseAuth = {
-      sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
-      signOut: () => signOut(auth),
-      onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
-      currentUser: () => auth.currentUser
-    };
+  initFirebaseAuthFlows();
+</script>
 
-    // Expose Firestore helpers + household handles
-    window.$rt = {
-      db, getHouseholdHandles,
-      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
-      getDocs, where, writeBatch
-    };
-
-    // Default household
-    window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
-  </script>
 
   <!-- App logic -->
   <script>
