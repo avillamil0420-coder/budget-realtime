@@ -44,7 +44,7 @@
     .tab.active{background:#2575fc;color:white;font-weight:bold}
     .tab-content{display:none}
     .tab-content.active{display:block}
-    .mobile-menu{display:none} /* reserved for future */
+    .mobile-menu{display:none}
     .category-badges{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
     @media (min-width:480px){.category-badges{grid-template-columns:1fr 1fr}}
     .category-badge{background:#f8f9fa;border-radius:8px;padding:12px;display:flex;flex-direction:column}
@@ -62,7 +62,7 @@
     .modal-content{background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .close-modal{background:none;border:none;font-size:1.5rem;color:#6c757d;width:auto}
-    /* Hide app when signed out (optional) */
+    /* Hide app when signed out */
     .signed-out .app-container{display:none}
   </style>
 </head>
@@ -284,10 +284,10 @@
 
     // 🔧 Replace with your Firebase config
     const firebaseConfig = {
-  apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
-  authDomain: "budget-beabb.firebaseapp.com",
-  projectId: "budget-beabb",
-  appId: "1:222008362126:web:70db15c87c13657d16b5df"      
+      apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
+      authDomain: "budget-beabb.firebaseapp.com",
+      projectId: "budget-beabb",
+      appId: "1:222008362126:web:70db15c87c13657d16b5df"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -298,15 +298,23 @@
     await setPersistence(auth, browserLocalPersistence);
 
     // Complete email-link sign-in if arriving from the email
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('pendingEmail');
-      if (!email) email = window.prompt('Confirm your email to finish sign-in');
-      if (email) {
-        await signInWithEmailLink(auth, email, window.location.href);
-        window.localStorage.removeItem('pendingEmail');
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+    try {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('pendingEmail');
+        if (!email) email = window.prompt('Confirm your email to finish sign-in');
+        if (email) {
+          await signInWithEmailLink(auth, email, window.location.href);
+          window.localStorage.removeItem('pendingEmail');
+          // Clean URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       }
+    } catch (err) {
+      console.error('Email-link sign-in failed:', err);
+      window.addEventListener('DOMContentLoaded', ()=>{
+        const n = document.getElementById('notification');
+        if (n) { n.textContent = `Auth error: ${err.code || ''} ${err.message || err}`; n.classList.add('show'); }
+      });
     }
 
     // Ensure a household doc exists
@@ -385,19 +393,22 @@
       setTimeout(()=> n.classList.remove('show'), 3000);
     }
 
-    // App state that rebinds per household
+    // ====== STATE ======
     let categories = [];
     let transactions = [];
     let handles = null;
     let unsubCats = null;
     let unsubTx = null;
 
+    // Helpers exposed by the module script
     const {
-      addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch, getHouseholdHandles
-    } = window.$rt;
+      addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+      getDocs, where, writeBatch, getHouseholdHandles
+    } = window.$rt || {};
 
+    // ====== HOUSEHOLD BINDING ======
     async function bindHousehold(householdId){
-      // Clean listeners
+      // Clean previous listeners
       if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
       if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
 
@@ -412,12 +423,14 @@
       handles = await getHouseholdHandles(householdId);
       if (hhLabel) hhLabel.textContent = handles.householdId;
 
-      // Listen
+      // Listen to categories
       unsubCats = onSnapshot(handles.categoriesCol, (snap) => {
         categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         rebuildCategoryOptions();
         renderCategoryBadges();
       });
+
+      // Listen to transactions (newest first)
       unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap) => {
         transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderTransactions();
@@ -426,22 +439,33 @@
       });
     }
 
-    // Signed-in gate
-    window.firebaseAuth.onAuthStateChanged(async (user)=>{
-      if (user) {
-        await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
-        document.body.classList.remove('signed-out');
-        showNotification(`Signed in as ${user.email || 'user'}`);
+    // ====== AUTH GATE (GUARDED) ======
+    const initAuthListener = () => {
+      if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
+        window.firebaseAuth.onAuthStateChanged(async (user)=>{
+          if (user) {
+            await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
+            document.body.classList.remove('signed-out');
+            showNotification(`Signed in as ${user.email || 'user'}`);
+          } else {
+            if (typeof unsubCats === 'function') unsubCats();
+            if (typeof unsubTx === 'function') unsubTx();
+            categories = []; transactions = [];
+            renderTransactions(); renderCategoryBadges(); updateSummary();
+            document.body.classList.add('signed-out');
+            // Auto-open sign-in modal (uncomment if you want it to pop immediately)
+            // openModal(document.getElementById('email-modal'));
+          }
+        });
       } else {
-        if (typeof unsubCats === 'function') unsubCats();
-        if (typeof unsubTx === 'function') unsubTx();
-        categories = []; transactions = [];
-        renderTransactions(); renderCategoryBadges(); updateSummary();
-        document.body.classList.add('signed-out');
+        console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
+        // Retry (prevents the “line ~796” crash if modules lag)
+        setTimeout(initAuthListener, 1500);
       }
-    });
+    };
+    initAuthListener();
 
-    // Tabs & UI builders
+    // ====== UI BUILDERS ======
     function rebuildCategoryOptions() {
       while (categorySelect.options.length > 1) categorySelect.remove(1);
       const currentType = typeSelect.value;
@@ -516,6 +540,7 @@
         wrap.appendChild(badge);
       });
 
+      // Wire buttons
       wrap.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-id')));
       });
@@ -560,7 +585,7 @@
       remainingEl.style.color = remaining < 0 ? '#e74c3c' : '#2ecc71';
     }
 
-    // Add Category
+    // ====== CATEGORY: ADD ======
     const categoryModal = document.getElementById('category-modal');
     document.getElementById('add-category-btn').addEventListener('click', ()=> openModal(categoryModal));
     document.getElementById('category-form').addEventListener('submit', async function(e){
@@ -587,7 +612,7 @@
       }
     });
 
-    // Edit Category + cascade
+    // ====== CATEGORY: EDIT + CASCADE ======
     const editModal = document.getElementById('category-edit-modal');
     document.getElementById('category-edit-form').addEventListener('submit', async function(e){
       e.preventDefault();
@@ -643,7 +668,7 @@
       openModal(editModal);
     }
 
-    // Category Detail
+    // ====== CATEGORY: DETAIL ======
     const detailModal = document.getElementById('category-detail-modal');
     const detailTitle = document.getElementById('detail-title');
     const detailItems = document.getElementById('detail-items');
@@ -684,7 +709,7 @@
       openModal(detailModal);
     }
 
-    // Add Transaction
+    // ====== TRANSACTION: ADD ======
     document.getElementById('transaction-form').addEventListener('submit', async function(e){
       e.preventDefault();
       const selectedCategory = categorySelect.value;
@@ -716,7 +741,7 @@
       }
     });
 
-    // Clear all (danger)
+    // ====== CLEAR ALL (DANGER) ======
     document.getElementById('clear-btn').addEventListener('click', async function(){
       if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
       try{
@@ -736,7 +761,7 @@
       }
     });
 
-    // Household Switcher
+    // ====== HOUSEHOLD SWITCHER ======
     const householdModal = document.getElementById('household-modal');
     document.getElementById('switch-household-btn').addEventListener('click', ()=> {
       const input = document.getElementById('household-input');
@@ -752,7 +777,7 @@
       showNotification(`Switched to: ${newId}`);
     });
 
-    // Email link sign-in UI
+    // ====== EMAIL LINK SIGN-IN UI ======
     const emailModal = document.getElementById('email-modal');
     document.getElementById('signin-btn').addEventListener('click', () => openModal(emailModal));
     document.getElementById('email-form').addEventListener('submit', async (e)=>{
