@@ -37,7 +37,6 @@
     .btn-secondary{background:#6c757d}.btn-secondary:hover{background:#5a6268}
     .btn-danger{background:#e74c3c}.btn-danger:hover{background:#c0392b}
     .btn-success{background:#2ecc71}.btn-success:hover{background:#27ae60}
-    .export-import{margin-top:20px;display:flex;flex-direction:column;gap:10px}
     .notification{position:fixed;top:20px;right:20px;padding:12px 20px;background:#2ecc71;color:white;border-radius:8px;box-shadow:0 5px 15px rgba(0,0,0,.2);transform:translateX(100%);transition:transform .3s;z-index:1000}
     .notification.show{transform:translateX(0)}
     .tabs{display:flex;margin-bottom:15px;background:#f8f9fa;border-radius:8px;overflow:hidden}
@@ -45,11 +44,7 @@
     .tab.active{background:#2575fc;color:white;font-weight:bold}
     .tab-content{display:none}
     .tab-content.active{display:block}
-    .mobile-menu{display:flex;justify-content:space-around;position:fixed;bottom:0;left:0;right:0;background:white;padding:10px;box-shadow:0 -2px 10px rgba(0,0,0,.1);z-index:100}
-    .menu-item{display:flex;flex-direction:column;align-items:center;font-size:.8rem;color:#6c757d}
-    .menu-item.active{color:#2575fc}
-    .menu-item i{font-size:1.2rem;margin-bottom:4px}
-    @media (min-width:768px){.mobile-menu{display:none}}
+    .mobile-menu{display:none} /* reserved for future */
     .category-badges{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
     @media (min-width:480px){.category-badges{grid-template-columns:1fr 1fr}}
     .category-badge{background:#f8f9fa;border-radius:8px;padding:12px;display:flex;flex-direction:column}
@@ -67,9 +62,11 @@
     .modal-content{background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .close-modal{background:none;border:none;font-size:1.5rem;color:#6c757d;width:auto}
+    /* Hide app when signed out (optional) */
+    .signed-out .app-container{display:none}
   </style>
 </head>
-<body>
+<body class="signed-out">
   <div class="container">
     <header>
       <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
@@ -139,6 +136,8 @@
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
         <p>Shared space ID (give this to your partner): <b id="household-label"></b></p>
         <div class="actions">
+          <button id="signin-btn" class="btn-success"><i class="fa-solid fa-right-to-bracket"></i> Sign in with Email</button>
+          <button id="signout-btn" class="btn-secondary"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
           <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
           <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
         </div>
@@ -245,37 +244,79 @@
     </div>
   </div>
 
-  <!-- Firebase: init + expose to window (module) -->
+  <!-- Email Sign-in Modal -->
+  <div class="modal" id="email-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Sign in via Email Link</h2>
+        <button class="close-modal" data-close="#email-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="email-form">
+        <div class="form-group">
+          <label for="email-input">Your email</label>
+          <input type="email" id="email-input" placeholder="you@example.com" required>
+        </div>
+        <button type="submit" class="btn-success">Send Sign-in Link</button>
+        <p style="margin-top:10px;color:#6c757d;font-size:.9rem;">
+          We’ll email you a secure link. Open it on this device to finish signing in.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase (module) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getAuth,
+      isSignInWithEmailLink,
+      sendSignInLinkToEmail,
+      signInWithEmailLink,
+      onAuthStateChanged,
+      signOut,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
       onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // TODO: replace with your Firebase config
+    // 🔧 Replace with your Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
-      authDomain: "budget-beabb.firebaseapp.com",
-      projectId: "budget-beabb",
-      appId: "1:222008362126:web:70db15c87c13657d16b5df",
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID",
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    await signInAnonymously(auth);
 
-    // Helper to ensure household doc exists
+    // Persist session in this browser
+    await setPersistence(auth, browserLocalPersistence);
+
+    // Complete email-link sign-in if arriving from the email
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('pendingEmail');
+      if (!email) email = window.prompt('Confirm your email to finish sign-in');
+      if (email) {
+        await signInWithEmailLink(auth, email, window.location.href);
+        window.localStorage.removeItem('pendingEmail');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    // Ensure a household doc exists
     async function ensureHouseholdDoc(householdId){
       const ref = doc(db, "households", householdId);
       const snap = await getDoc(ref);
       if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
       return ref;
     }
-
-    // Factory: build collections + return handles for a given household
+    // Build collection handles for a household
     async function getHouseholdHandles(householdId){
       const householdRef = await ensureHouseholdDoc(householdId);
       return {
@@ -286,102 +327,43 @@
       };
     }
 
-    // Initial household (default)
-    const DEFAULT_HOUSEHOLD = "our-home-01"; // change if you like
-
-    // Expose shared Firebase utils + a way to switch households at runtime
-    window.$rt = {
-      db, auth, addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch,
-      getHouseholdHandles
+    // Expose small wrappers for non-module script
+    window.firebaseAuth = {
+      sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
+      signOut: () => signOut(auth),
+      onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
+      currentUser: () => auth.currentUser
     };
 
-    // Also expose default household id to non-module script
-    window.__DEFAULT_HOUSEHOLD__ = DEFAULT_HOUSEHOLD;
+    // Expose Firestore helpers + household handles
+    window.$rt = {
+      db, getHouseholdHandles,
+      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+      getDocs, where, writeBatch
+    };
+
+    // Default household
+    window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
   </script>
 
-  <!-- Main App Script -->
+  <!-- App logic -->
   <script>
-  document.addEventListener('DOMContentLoaded', async function () {
-    // UI elements
+  document.addEventListener('DOMContentLoaded', function () {
     const hhLabel = document.getElementById('household-label');
     const typeSelect = document.getElementById('type');
     const categorySelect = document.getElementById('category');
-    const dateEl = document.getElementById('date');
-    if (dateEl) dateEl.valueAsDate = new Date();
+    const dateEl = document.getElementById('date'); if (dateEl) dateEl.valueAsDate = new Date();
 
-    // Tabs
     const tabs = document.querySelectorAll('.tab');
-    const menuItems = document.querySelectorAll('.menu-item'); // optional
     const tabContents = document.querySelectorAll('.tab-content');
     function activateTab(tabId) {
       tabContents.forEach(c => c.classList.remove('active'));
       const targetTab = document.getElementById(`${tabId}-tab`);
       if (targetTab) targetTab.classList.add('active');
       tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
-      menuItems.forEach(mi => mi.classList.toggle('active', mi.getAttribute('data-tab') === tabId));
     }
     tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.getAttribute('data-tab'))));
-    menuItems.forEach(item => item.addEventListener('click', () => activateTab(item.getAttribute('data-tab'))));
 
-    // Toast
-    function showNotification(message){
-      const n = document.getElementById('notification');
-      if (!n) return;
-      n.textContent = message;
-      n.classList.add('show');
-      setTimeout(()=> n.classList.remove('show'), 3000);
-    }
-
-    // App state (will be re-bound on household switch)
-    let categories = [];
-    let transactions = [];
-    let handles = null;
-    let unsubCats = null;
-    let unsubTx = null;
-
-    // Firebase helpers
-    const { addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch, getHouseholdHandles } = window.$rt;
-
-    // Bind listeners for a given household
-    async function bindHousehold(householdId){
-      // Clean old listeners
-      if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
-      if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
-
-      // Reset UI lists
-      categories = [];
-      transactions = [];
-      renderTransactions();
-      renderCategoryBadges();
-      updateSummary();
-
-      // Build refs
-      handles = await getHouseholdHandles(householdId);
-      const { categoriesCol, transactionsCol } = handles;
-
-      // Label
-      if (hhLabel) hhLabel.textContent = handles.householdId;
-
-      // Listen to categories
-      unsubCats = onSnapshot(categoriesCol, (snap) => {
-        categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        rebuildCategoryOptions();
-        renderCategoryBadges();
-      });
-
-      // Listen to transactions (newest first)
-      unsubTx = onSnapshot(query(transactionsCol, orderBy('date','desc')), (snap) => {
-        transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderTransactions();
-        updateSummary();
-        renderCategoryBadges();
-      });
-    }
-
-    // Initial household
-    await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
-
-    // Modals helpers
     function openModal(el){ if (el) el.style.display='flex'; }
     function closeModal(el){ if (el) el.style.display='none'; }
     document.querySelectorAll('.close-modal').forEach(btn=>{
@@ -395,7 +377,71 @@
       document.querySelectorAll('.modal').forEach(m => { if (e.target === m) m.style.display = 'none'; });
     });
 
-    // UI builders
+    function showNotification(message){
+      const n = document.getElementById('notification');
+      if (!n) return;
+      n.textContent = message;
+      n.classList.add('show');
+      setTimeout(()=> n.classList.remove('show'), 3000);
+    }
+
+    // App state that rebinds per household
+    let categories = [];
+    let transactions = [];
+    let handles = null;
+    let unsubCats = null;
+    let unsubTx = null;
+
+    const {
+      addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch, getHouseholdHandles
+    } = window.$rt;
+
+    async function bindHousehold(householdId){
+      // Clean listeners
+      if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
+      if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
+
+      // Reset UI
+      categories = [];
+      transactions = [];
+      renderTransactions();
+      renderCategoryBadges();
+      updateSummary();
+
+      // Build refs
+      handles = await getHouseholdHandles(householdId);
+      if (hhLabel) hhLabel.textContent = handles.householdId;
+
+      // Listen
+      unsubCats = onSnapshot(handles.categoriesCol, (snap) => {
+        categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildCategoryOptions();
+        renderCategoryBadges();
+      });
+      unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap) => {
+        transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTransactions();
+        updateSummary();
+        renderCategoryBadges();
+      });
+    }
+
+    // Signed-in gate
+    window.firebaseAuth.onAuthStateChanged(async (user)=>{
+      if (user) {
+        await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
+        document.body.classList.remove('signed-out');
+        showNotification(`Signed in as ${user.email || 'user'}`);
+      } else {
+        if (typeof unsubCats === 'function') unsubCats();
+        if (typeof unsubTx === 'function') unsubTx();
+        categories = []; transactions = [];
+        renderTransactions(); renderCategoryBadges(); updateSummary();
+        document.body.classList.add('signed-out');
+      }
+    });
+
+    // Tabs & UI builders
     function rebuildCategoryOptions() {
       while (categorySelect.options.length > 1) categorySelect.remove(1);
       const currentType = typeSelect.value;
@@ -407,9 +453,10 @@
           categorySelect.appendChild(opt);
         }
       });
-      if (categorySelect.value === '') return;
-      const stillExists = [...categorySelect.options].some(o => o.value === categorySelect.value);
-      if (!stillExists) categorySelect.value = '';
+      if (categorySelect.value) {
+        const still = [...categorySelect.options].some(o => o.value === categorySelect.value);
+        if (!still) categorySelect.value = '';
+      }
     }
     typeSelect.addEventListener('change', rebuildCategoryOptions);
 
@@ -421,7 +468,6 @@
         wrap.innerHTML = '<p>No categories yet. Add one to get started.</p>';
         return;
       }
-
       categories.forEach((category) => {
         const sumForCat = transactions
           .filter(t => t.category === category.name && t.type === category.type)
@@ -470,7 +516,6 @@
         wrap.appendChild(badge);
       });
 
-      // wire buttons
       wrap.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-id')));
       });
@@ -508,7 +553,6 @@
       const totalIncome = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
       const totalExpenses = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
       const remaining = totalIncome - totalExpenses;
-
       document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
       document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
       const remainingEl = document.getElementById('remaining-budget');
@@ -525,17 +569,25 @@
       const type   = document.getElementById('category-type').value;
       const budget = parseFloat(document.getElementById('category-budget').value) || 0;
 
-      // Prevent duplicates: same name + type
+      // Prevent duplicates
       const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type);
       if (exists) { showNotification('Category already exists for this type.'); return; }
 
-      await addDoc(handles.categoriesCol, { name, type, budget });
-      this.reset();
-      closeModal(categoryModal);
-      showNotification('Category added!');
+      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
+      try {
+        await addDoc(handles.categoriesCol, { name, type, budget });
+        this.reset();
+        closeModal(categoryModal);
+        showNotification('Category added!');
+      } catch (err) {
+        console.error(err);
+        showNotification(`Error saving category: ${err.code || ''} ${err.message || err}`);
+      } finally {
+        btn.disabled = false;
+      }
     });
 
-    // Edit Category + cascade rename/type to transactions
+    // Edit Category + cascade
     const editModal = document.getElementById('category-edit-modal');
     document.getElementById('category-edit-form').addEventListener('submit', async function(e){
       e.preventDefault();
@@ -548,30 +600,35 @@
       const newBudget = parseFloat(document.getElementById('edit-category-budget').value) || 0;
 
       // Prevent duplicates after rename
-      const exists = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
-      if (exists) { showNotification('Another category with this name & type already exists.'); return; }
+      const dup = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
+      if (dup) { showNotification('Another category with this name & type already exists.'); return; }
 
-      // Update category
-      await updateDoc(doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
+      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
+      try {
+        await updateDoc(doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
 
-      // If name/type changed, migrate transactions in a batch
-      const changed = (oldName !== newName) || (oldType !== newType);
-      if (changed) {
-        const q = window.$rt.query(
-          handles.transactionsCol,
-          window.$rt.where('category', '==', oldName),
-          window.$rt.where('type', '==', oldType)
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const batch = writeBatch(window.$rt.db);
-          snap.forEach(docSnap => { batch.update(docSnap.ref, { category: newName, type: newType }); });
-          await batch.commit();
+        const changed = (oldName !== newName) || (oldType !== newType);
+        if (changed) {
+          const q = window.$rt.query(
+            handles.transactionsCol,
+            window.$rt.where('category', '==', oldName),
+            window.$rt.where('type', '==', oldType)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const batch = writeBatch(window.$rt.db);
+            snap.forEach(docSnap => batch.update(docSnap.ref, { category: newName, type: newType }));
+            await batch.commit();
+          }
         }
+        closeModal(editModal);
+        showNotification('Category updated!');
+      } catch (err) {
+        console.error(err);
+        showNotification(`Error updating category: ${err.code || ''} ${err.message || err}`);
+      } finally {
+        btn.disabled = false;
       }
-
-      closeModal(editModal);
-      showNotification('Category updated!');
     });
 
     function openEditModal(id){
@@ -587,15 +644,14 @@
     }
 
     // Category Detail
-    const detailModal   = document.getElementById('category-detail-modal');
-    const detailTitle   = document.getElementById('detail-title');
-    const detailItems   = document.getElementById('detail-items');
+    const detailModal = document.getElementById('category-detail-modal');
+    const detailTitle = document.getElementById('detail-title');
+    const detailItems = document.getElementById('detail-items');
     const detailSummary = document.getElementById('detail-summary');
 
     function openDetailModal(id){
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
-
       const items = transactions.filter(t => t.category === cat.name && t.type === cat.type);
       const total = items.reduce((s,t)=> s + Number(t.amount||0), 0);
       const budget = cat.budget || 0;
@@ -608,7 +664,6 @@
           ${budget > 0 ? `<div><strong>${cat.type === 'expense' ? 'Left' : 'To target'}:</strong> $${(budget - total).toFixed(2)}</div>` : ''}
         </div>
       `;
-
       if (items.length === 0) {
         detailItems.innerHTML = `<p style="margin-top:10px;">No ${cat.type} entries in this category yet.</p>`;
       } else {
@@ -626,7 +681,6 @@
             </div>
           `).join('');
       }
-
       openModal(detailModal);
     }
 
@@ -646,27 +700,40 @@
         description: (document.getElementById('description').value || 'No description').trim(),
         createdAt: Date.now()
       };
-      await addDoc(handles.transactionsCol, transaction);
-      this.reset();
-      if (dateEl) dateEl.valueAsDate = new Date();
-      typeSelect.value = 'income';
-      rebuildCategoryOptions();
-      showNotification('Transaction added!');
+      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
+      try {
+        await addDoc(handles.transactionsCol, transaction);
+        this.reset();
+        if (dateEl) dateEl.valueAsDate = new Date();
+        typeSelect.value = 'income';
+        rebuildCategoryOptions();
+        showNotification('Transaction added!');
+      } catch (err) {
+        console.error(err);
+        showNotification(`Error adding transaction: ${err.code || ''} ${err.message || err}`);
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     // Clear all (danger)
     document.getElementById('clear-btn').addEventListener('click', async function(){
       if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
-      const delCat = async () => {
-        const ids = categories.map(c=>c.id);
-        for (const id of ids) { await deleteDoc(doc(handles.categoriesCol, id)); }
-      };
-      const delTx = async () => {
-        const ids = transactions.map(t=>t.id);
-        for (const id of ids) { await deleteDoc(doc(handles.transactionsCol, id)); }
-      };
-      await delTx(); await delCat();
-      showNotification('All data cleared for this household.');
+      try{
+        const delCat = async () => {
+          const ids = categories.map(c=>c.id);
+          for (const id of ids) { await deleteDoc(doc(handles.categoriesCol, id)); }
+        };
+        const delTx = async () => {
+          const ids = transactions.map(t=>t.id);
+          for (const id of ids) { await deleteDoc(doc(handles.transactionsCol, id)); }
+        };
+        await delTx(); await delCat();
+        showNotification('All data cleared for this household.');
+      } catch(err){
+        console.error(err);
+        showNotification(`Error clearing data: ${err.code || ''} ${err.message || err}`);
+      }
     });
 
     // Household Switcher
@@ -683,6 +750,41 @@
       await bindHousehold(newId);
       closeModal(householdModal);
       showNotification(`Switched to: ${newId}`);
+    });
+
+    // Email link sign-in UI
+    const emailModal = document.getElementById('email-modal');
+    document.getElementById('signin-btn').addEventListener('click', () => openModal(emailModal));
+    document.getElementById('email-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = (document.getElementById('email-input').value || '').trim();
+      if (!email) return;
+
+      const actionCodeSettings = {
+        url: window.location.origin + window.location.pathname,
+        handleCodeInApp: true
+        // dynamicLinkDomain: "YOUR_DYNAMIC_LINK_DOMAIN" // optional if configured
+      };
+
+      try{
+        await window.firebaseAuth.sendSignInLink(email, actionCodeSettings);
+        window.localStorage.setItem('pendingEmail', email);
+        closeModal(emailModal);
+        showNotification('Sign-in link sent! Check your email.');
+      }catch(err){
+        console.error(err);
+        showNotification(`Error sending link: ${err.code || ''} ${err.message || err}`);
+      }
+    });
+
+    document.getElementById('signout-btn').addEventListener('click', async ()=>{
+      try{
+        await window.firebaseAuth.signOut();
+        showNotification('Signed out.');
+      }catch(err){
+        console.error(err);
+        showNotification(`Error signing out: ${err.code || ''} ${err.message || err}`);
+      }
     });
 
   });
