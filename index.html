@@ -14,8 +14,10 @@
     --border:#1f2937; --muted:#94a3b8; --text:#e5e7eb;
     --brand:#6ea8fe; --brand2:#4c72ff;
     --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    --topbar-h:56px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
   body{
     font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
     color:var(--text);
@@ -24,44 +26,66 @@
       radial-gradient(900px 600px at 100% 0%, #1c254a66, transparent),
       linear-gradient(180deg, var(--bg2), var(--bg));
     min-height:100dvh;
-    padding:12px 12px calc(70px + env(safe-area-inset-bottom));
+    padding-top: calc(env(safe-area-inset-top) + 8px);
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    padding-left: 12px; padding-right: 12px;
     display:flex;flex-direction:column;align-items:center;
   }
   .container{width:100%;max-width:980px}
-  header{text-align:center;margin:6px 0 12px;}
+  header{text-align:center;margin:6px 0 8px;}
   header h1{font-size:1.8rem}
   header p{color:var(--muted);margin-top:6px}
 
-  .tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;background:transparent;padding:6px 0 8px;backdrop-filter:blur(6px)}
-  .tab{flex:1;text-align:center;cursor:pointer;font-weight:700;padding:10px;border-radius:12px;color:var(--muted);
-       background:rgba(255,255,255,0.03);border:1px solid var(--border);transition:transform .08s ease,filter .2s ease,background .2s ease}
-  .tab:active{transform:translateY(1px) scale(.995)}
-  .tab.active{color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);border-color:transparent;box-shadow:0 10px 28px rgba(78,114,255,.22), inset 0 0 0 1px #cbd5ff40}
-
-  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;gap:8px;align-items:center;justify-content:space-between;
-    background:linear-gradient(180deg, #0a1020ee, #070c19ee);border-top:1px solid var(--border);
-    padding:8px calc(8px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-right));backdrop-filter:saturate(1.2) blur(8px)}
-  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:.85rem;padding:8px;border-radius:12px;border:1px solid var(--border);background:#0b1120;cursor:pointer}
-  .nav-btn.active{color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);border-color:transparent}
+  /* Top tabs (single nav) */
+  .tabs{
+    position:sticky; top:calc(env(safe-area-inset-top) + 0px); z-index:20;
+    display:flex; gap:6px; height:var(--topbar-h); align-items:center;
+    background:transparent; padding:6px 0 8px; backdrop-filter:blur(6px)
+  }
+  .tab{
+    flex:1;text-align:center;cursor:pointer;font-weight:800;
+    padding:12px 10px;border-radius:12px;color:var(--muted);
+    background:rgba(255,255,255,0.03);border:1px solid var(--border);
+    transition:transform .08s ease,filter .2s ease,background .2s ease
+  }
+  .tab:active{transform:translateY(2px) scale(.99)}
+  .tab.active{
+    color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);
+    border-color:transparent;box-shadow:0 10px 28px rgba(78,114,255,.22), inset 0 0 0 1px #cbd5ff40
+  }
 
   .app-container{display:grid;grid-template-columns:1fr;gap:14px}
   @media(min-width:820px){.app-container{grid-template-columns:1fr 1fr}}
 
-  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--border);border-radius:16px;padding:16px;
-        box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02)}
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--border);border-radius:16px;padding:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02)
+  }
   .card-title{display:flex;align-items:center;justify-content:space-between;color:#dbeafe;font-size:1.05rem;margin-bottom:12px}
 
-  label{display:block;margin:8px 0 6px;color:#cbd5e1;font-weight:600}
-  input,select{width:100%;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:1rem;min-height:44px;outline:none}
-  input:focus,select:focus{border-color:#395cff;box-shadow:0 0 0 3px #2b4fff40}
-  button{min-height:44px;border:none;border-radius:12px;cursor:pointer;font-weight:800;color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);
-         box-shadow:0 10px 24px rgba(45,78,255,.25), inset 0 0 0 1px #cbd5ff40;transition:transform .08s ease,filter .2s}
-  button:active{transform:translateY(1px) scale(.995)}
+  /* Sections must leave space for sticky tabs on scrollIntoView */
+  .tab-content{scroll-margin-top: calc(var(--topbar-h) + env(safe-area-inset-top) + 8px);}
+
+  label{display:block;margin:8px 0 6px;color:#cbd5e1;font-weight:700}
+  input,select{
+    width:100%;background:#0b1120;color:var(--text);
+    border:1px solid var(--border);border-radius:14px;padding:12px;font-size:17px;min-height:44px;outline:none;
+    transition: box-shadow .2s, transform .06s;
+  }
+  input:focus,select:focus{border-color:#395cff;box-shadow:0 6px 24px rgba(78,114,255,.18), 0 0 0 3px #2b4fff40}
+  button{
+    min-height:48px;border:none;border-radius:16px;cursor:pointer;font-weight:900;letter-spacing:.2px;
+    color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);
+    box-shadow:0 10px 24px rgba(45,78,255,.25), inset 0 0 0 1px #cbd5ff40;transition:transform .08s ease,filter .2s
+  }
+  button:hover{filter:brightness(1.02)}
+  button:active{transform:translateY(2px) scale(.99)}
   .btn-secondary{background:linear-gradient(160deg,#cbd5e11a,#94a3b81a);color:#e5e7eb;box-shadow:inset 0 0 0 1px #74809b40}
   .btn-danger{background:linear-gradient(160deg,#ff7474,#ff4b4b);color:#fff;box-shadow:0 10px 24px rgba(255,80,80,.25)}
   .btn-success{background:linear-gradient(160deg,#5df3a6,#2fd071);color:#0b1224;box-shadow:0 10px 24px rgba(72,255,164,.25)}
 
-  .transaction-list{max-height:360px;overflow-y:auto}
+  .transaction-list{max-height:360px;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .transaction-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-top:1px solid var(--border);font-size:.98rem}
   .transaction-item:first-child{border-top:none}
   .income{color:var(--ok)} .expense{color:var(--bad)}
@@ -78,6 +102,14 @@
   .summary-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #243056}
   .summary-item:last-child{border-bottom:none}
 
+  .amount-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .amount-chip {
+    background:#0b1120; border:1px solid var(--border); border-radius:999px;
+    padding:8px 14px; font-weight:800; color:#e5e7eb; cursor:pointer;
+    transition: transform .05s;
+  }
+  .amount-chip:active { transform: translateY(1px); }
+
   .modal{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:12px;background:rgba(4,7,16,.65);backdrop-filter:blur(6px)}
   .modal-content{background:linear-gradient(180deg,#0b1120,#0a0f1c);color:var(--text);border:1px solid var(--border);border-radius:16px;padding:16px;width:100%;max-width:440px;max-height:90vh;overflow:auto}
   .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -91,9 +123,10 @@
   <div class="container">
     <header>
       <h1>💰 Budget Tracker</h1>
-      <p>Realtime shared space • Auto invite link • Mobile-first</p>
+      <p>Realtime shared space • Mobile-first</p>
     </header>
 
+    <!-- Top tabs (single nav) -->
     <div class="tabs">
       <div class="tab active" data-tab="transactions">Transactions</div>
       <div class="tab" data-tab="summary">Summary</div>
@@ -101,22 +134,38 @@
       <div class="tab" data-tab="manage">Manage</div>
     </div>
 
+    <!-- Main -->
     <div class="app-container">
-      <div class="card tab-content active" id="transactions-tab">
+      <!-- Transactions -->
+      <section class="card tab-content" id="transactions-tab">
         <h2 class="card-title"><span><i class="fas fa-plus-circle"></i> Add Transaction</span></h2>
         <form id="transaction-form">
           <label>Type</label>
           <select id="type" required><option value="income">Income</option><option value="expense">Expense</option></select>
+
           <label>Category</label>
           <select id="category" required><option value="">Select a category</option></select>
-          <label>Amount ($)</label><input type="number" id="amount" min="0" step="0.01" required>
+
+          <label>Amount ($)</label>
+          <input type="number" id="amount" min="0" step="0.01" required>
+          <div class="amount-chips" id="amount-chips">
+            <button type="button" class="amount-chip" data-a="5">+ $5</button>
+            <button type="button" class="amount-chip" data-a="10">+ $10</button>
+            <button type="button" class="amount-chip" data-a="20">+ $20</button>
+            <button type="button" class="amount-chip" data-a="50">+ $50</button>
+          </div>
+
           <label>Date</label><input type="date" id="date" required>
           <label>Description</label><input type="text" id="description" placeholder="Optional">
-          <div style="display:flex;gap:10px;margin-top:10px;"><button type="submit" class="btn-success" style="flex:1"><i class="fa-solid fa-plus"></i> Add</button></div>
-        </form>
-      </div>
 
-      <div class="card summary-card tab-content" id="summary-tab">
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button type="submit" class="btn-success" style="flex:1"><i class="fa-solid fa-plus"></i> Add</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Summary -->
+      <section class="card summary-card tab-content" id="summary-tab">
         <h2 class="card-title"><i class="fas fa-chart-pie"></i> Budget Summary</h2>
         <div class="summary-item"><span>Total Income:</span><span id="total-income">$0.00</span></div>
         <div class="summary-item"><span>Total Expenses:</span><span id="total-expenses">$0.00</span></div>
@@ -125,17 +174,19 @@
           <canvas id="summary-chart"></canvas>
           <div id="summary-table" style="overflow-x:auto;margin-top:10px;"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="card tab-content" id="categories-tab">
+      <!-- Categories -->
+      <section class="card tab-content" id="categories-tab">
         <h2 class="card-title">
           <span><i class="fas fa-tags"></i> Categories</span>
           <button id="add-category-btn" style="width:auto"><i class="fas fa-plus"></i> Add New</button>
         </h2>
         <div class="category-badges" id="category-badges"></div>
-      </div>
+      </section>
 
-      <div class="card tab-content" id="manage-tab">
+      <!-- Manage -->
+      <section class="card tab-content" id="manage-tab">
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
         <div style="display:grid;gap:10px;">
           <div>
@@ -154,27 +205,20 @@
             </div>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap; margin-top:6px;">
-            <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
             <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card" id="recent-card">
+      <!-- Recent Transactions -->
+      <section class="card tab-content" id="recent-tab">
         <h2 class="card-title"><i class="fas fa-list"></i> Recent Transactions</h2>
         <div class="transaction-list" id="transaction-list">
           <div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>
         </div>
-      </div>
+      </section>
     </div>
   </div>
-
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-tab="transactions"><i class="fa-solid fa-plus"></i><span>Transactions</span></button>
-    <button class="nav-btn" data-tab="summary"><i class="fa-solid fa-chart-column"></i><span>Summary</span></button>
-    <button class="nav-btn" data-tab="categories"><i class="fa-solid fa-tags"></i><span>Categories</span></button>
-    <button class="nav-btn" data-tab="manage"><i class="fa-solid fa-gear"></i><span>Manage</span></button>
-  </nav>
 
   <!-- Modals -->
   <div class="modal" id="category-modal">
@@ -186,6 +230,29 @@
         <label>Monthly Budget (expense) / Target (income)</label><input type="number" id="category-budget" min="0" step="0.01">
         <button type="submit" class="btn-success">Save Category</button>
       </form>
+    </div>
+  </div>
+
+  <div class="modal" id="category-edit-modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Edit Category</h2><button class="close-modal" data-close="#category-edit-modal">&times;</button></div>
+      <form id="category-edit-form">
+        <input type="hidden" id="edit-category-id">
+        <input type="hidden" id="edit-old-name">
+        <input type="hidden" id="edit-old-type">
+        <label>Name</label><input type="text" id="edit-category-name" required>
+        <label>Type</label><select id="edit-category-type" required><option value="expense">Expense</option><option value="income">Income</option></select>
+        <label>Monthly Amount / Budget</label><input type="number" id="edit-category-budget" min="0" step="0.01">
+        <button type="submit" class="btn-success">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="category-detail-modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="detail-title">Category Details</h2><button class="close-modal" data-close="#category-detail-modal">&times;</button></div>
+      <div id="detail-summary" style="margin-bottom:10px;"></div>
+      <div id="detail-items"></div>
     </div>
   </div>
 
@@ -214,6 +281,18 @@
 
   <script>
   (function(){
+    // --- FORCE household id in URL on first load (before Firebase) ---
+    const BASE_URL = (location.origin + location.pathname).replace(/index\.html?$/,'');
+    (function ensureHHInUrl(){
+      const qs = new URLSearchParams(location.search);
+      if (!qs.get('h')) {
+        const existing = localStorage.getItem('hh_id');
+        const newId = existing || ('hh_' + Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10));
+        localStorage.setItem('hh_id', newId);
+        history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(newId)}`);
+      }
+    })();
+
     // ===== CONFIG (yours) =====
     const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
@@ -227,48 +306,50 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
-    // ===== UI helpers =====
+    // ===== Utilities =====
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
-    const notify = (msg)=>{ const n=$("#notification"); n.textContent=msg; n.classList.add("show"); setTimeout(()=>n.classList.remove("show"),2200); };
+    const notify = (msg)=>{ const n=$("#notification"); n.textContent=msg; n.classList.add("show"); setTimeout(()=>n.classList.remove("show"),2400); };
+    const haptic = (ms=8)=>{ if (navigator.vibrate) try{ navigator.vibrate(ms); }catch{} };
 
-    // Tabs & bottom nav
-    function activateTab(id){
-      $$(".tab-content").forEach(el=>el.classList.remove("active"));
-      const t = document.getElementById(id+"-tab"); if (t) t.classList.add("active");
-      $$(".tab").forEach(b=>b.classList.toggle("active", b.dataset.tab===id));
-      $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===id));
-      window.scrollTo({top:0,behavior:"smooth"});
+    // Top tabs scroll behavior (iPhone friendly)
+    function scrollToSection(tabId){
+      const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
+      const el = document.getElementById(tabId + "-tab");
+      if (!el) return;
+      const y = el.getBoundingClientRect().top + window.scrollY - headerH - 8;
+      window.scrollTo({ top: y, behavior: "smooth" });
     }
-    $$(".tab").forEach(b=>b.addEventListener("click", ()=>activateTab(b.dataset.tab)));
-    $$(".nav-btn").forEach(b=>b.addEventListener("click", ()=>activateTab(b.dataset.tab)));
+    const sections = Array.from(document.querySelectorAll(".tab-content"));
+    const tabsTop  = Array.from(document.querySelectorAll(".tab"));
+    let ticking = false;
+    function onScroll(){
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(()=>{
+        const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
+        const mid = window.scrollY + headerH + 20;
+        let active = sections[0];
+        for (const s of sections){ if (s.offsetTop - 2 <= mid) active = s; else break; }
+        const id = active.id.replace("-tab","");
+        tabsTop.forEach(t=>t.classList.toggle("active", t.dataset.tab===id));
+        ticking = false;
+      });
+    }
+    window.addEventListener("scroll", onScroll, {passive:true});
+    tabsTop.forEach(tab=>tab.addEventListener("click", ()=>{ haptic(); scrollToSection(tab.dataset.tab); }));
 
-    // State
-    let handles=null, categories=[], transactions=[], unsubCats=null, unsubTx=null;
-    const BASE_URL = location.origin + location.pathname.replace(/index\.html?$/,'');
-    const qs = new URLSearchParams(location.search);
-    let householdId = qs.get('h') || '';
-
-    // Auto date
+    // App state
     const dateEl = $("#date"); if (dateEl) dateEl.valueAsDate = new Date();
+    let handles=null, categories=[], transactions=[], unsubCats=null, unsubTx=null;
+    let householdId = new URLSearchParams(location.search).get('h') || '';
 
     // Firestore helpers
     async function ensureHousehold(id){
       const ref = db.doc(`households/${id}`);
       const snap = await ref.get();
       if (!snap.exists) await ref.set({createdAt: Date.now()});
-      return {
-        id, ref,
-        categoriesCol: ref.collection("categories"),
-        transactionsCol: ref.collection("transactions")
-      };
+      return { id, ref, categoriesCol: ref.collection("categories"), transactionsCol: ref.collection("transactions") };
     }
-
-    function randomId(len=22){
-      const chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let s='hh_'; for(let i=0;i<len;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s;
-    }
-
     async function bindHousehold(id){
       if (unsubCats) { unsubCats(); unsubCats = null; }
       if (unsubTx)   { unsubTx();   unsubTx   = null; }
@@ -277,13 +358,13 @@
       handles = await ensureHousehold(id);
       $("#household-label").textContent = id;
 
-      // Invite link in Manage
+      // Invite link UI
       const link = `${BASE_URL}?h=${encodeURIComponent(id)}`;
       const inviteInput = $("#invite-url-manage");
       const copyBtn = $("#copy-link-manage");
       inviteInput.value = link; inviteInput.style.display = "inline-block";
       copyBtn.style.display = "inline-block";
-      copyBtn.onclick = async () => { await navigator.clipboard.writeText(link); notify("Invite link copied!"); };
+      copyBtn.onclick = async () => { await navigator.clipboard.writeText(link); notify("Invite link copied!"); haptic(); };
 
       unsubCats = handles.categoriesCol.onSnapshot(snap=>{
         categories = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -299,15 +380,11 @@
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
     auth.onAuthStateChanged(async (user)=>{
       if (!user) { await auth.signInAnonymously().catch(console.error); return; }
-      if (!householdId) {
-        householdId = randomId();
-        history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(householdId)}`);
-        notify("Private space created. Share this URL to invite others.");
-      }
+      // householdId guaranteed by ensureHHInUrl
       bindHousehold(householdId);
     });
 
-    // UI build
+    // UI builders
     function rebuildCategoryOptions(){
       const sel = $("#category");
       while (sel.options.length>1) sel.remove(1);
@@ -347,8 +424,20 @@
           <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.85rem;color:#94a3b8;">
             <span>${hasBudget?percent.toFixed(0)+'%':'—'}</span><span>${remainingText}</span>
           </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn-secondary btn-view" data-id="${c.id}" style="flex:1;">View items</button>
+            <button class="btn-secondary btn-edit" data-id="${c.id}" style="flex:1;">Edit</button>
+          </div>
         `;
         wrap.appendChild(div);
+      });
+
+      // Wire the buttons
+      wrap.querySelectorAll(".btn-view").forEach(btn=>{
+        btn.addEventListener("click", ()=> openDetailModal(btn.dataset.id));
+      });
+      wrap.querySelectorAll(".btn-edit").forEach(btn=>{
+        btn.addEventListener("click", ()=> openEditModal(btn.dataset.id));
       });
     }
 
@@ -437,48 +526,204 @@
       if (exists) { notify("Category already exists."); return; }
       try {
         await handles.categoriesCol.add({ name, type, budget });
-        e.target.reset();
-        $("#category-modal").style.display='none';
-        notify("Category added!");
+        e.target.reset(); $("#category-modal").style.display='none'; notify("Category added!"); haptic();
       } catch (err) { console.error(err); notify("Error adding category"); }
     });
 
-    // Add Transaction
-    $("#transaction-form").addEventListener("submit", async (e)=>{
+    // Category Edit (with cascade rename)
+    function openEditModal(id){
+      const cat = categories.find(c=>c.id===id); if (!cat) return;
+      $("#edit-category-id").value = id;
+      $("#edit-old-name").value = cat.name;
+      $("#edit-old-type").value = cat.type;
+      $("#edit-category-name").value = cat.name;
+      $("#edit-category-type").value = cat.type;
+      $("#edit-category-budget").value = cat.budget || 0;
+      $("#category-edit-modal").style.display = 'flex';
+    }
+    document.getElementById('category-edit-form').addEventListener('submit', async (e)=>{
+      e.preventDefault(); if (!handles) return;
+      const id = $("#edit-category-id").value;
+      const oldName = $("#edit-old-name").value;
+      const oldType = $("#edit-old-type").value;
+      const newName = $("#edit-category-name").value.trim();
+      const newType = $("#edit-category-type").value;
+      const newBudget = parseFloat($("#edit-category-budget").value)||0;
+
+      const dup = categories.some(c=>c.id!==id && c.name.toLowerCase()===newName.toLowerCase() && c.type===newType);
+      if (dup){ notify('Another category with this name & type exists.'); return; }
+
+      try{
+        await handles.categoriesCol.doc(id).update({ name:newName, type:newType, budget:newBudget });
+        if (oldName!==newName || oldType!==newType){
+          const q = handles.transactionsCol.where('category','==',oldName).where('type','==',oldType);
+          const snap = await q.get();
+          if (!snap.empty){
+            const batch = db.batch();
+            snap.docs.forEach(d=> batch.update(d.ref, { category:newName, type:newType }));
+            await batch.commit();
+          }
+        }
+        $("#category-edit-modal").style.display='none';
+        notify('Category updated.');
+      }catch(err){ console.error(err); notify('Error updating category.'); }
+    });
+
+    // Category Details → list items with Edit buttons
+    function openDetailModal(id){
+      const cat = categories.find(c=>c.id===id); if (!cat) return;
+      const items = transactions.filter(t=>t.category===cat.name && t.type===cat.type);
+      const total = items.reduce((s,t)=>s+Number(t.amount||0),0);
+      const budget = Number(cat.budget||0);
+
+      $("#detail-title").textContent = `${cat.name} (${cat.type})`;
+      $("#detail-summary").innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#cbd5e1;">
+          <div><strong>Total ${cat.type==='expense'?'spent':'received'}:</strong> $${total.toFixed(2)}</div>
+          <div><strong>${cat.type==='expense'?'Budget':'Target'}:</strong> ${budget>0?'$'+budget.toFixed(2):'—'}</div>
+          ${budget>0?`<div><strong>${cat.type==='expense'?'Left':'To target'}:</strong> $${(budget-total).toFixed(2)}</div>`:''}
+        </div>`;
+      $("#detail-items").innerHTML = items.length===0
+        ? `<p style="margin-top:10px;color:#8ea1c7;">No ${cat.type} entries in this category yet.</p>`
+        : items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(item=>`
+          <div class="transaction-item" style="padding-left:0;">
+            <div class="transaction-title">
+              <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
+              ${item.description || 'No description'} <small style="color:#8ea1c7;margin-left:8px;">(${item.date})</small>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="${item.type==='income'?'income':'expense'}">${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}</div>
+              <button class="btn-secondary tx-edit" data-id="${item.id}" style="width:auto;padding:6px 10px;">Edit</button>
+            </div>
+          </div>`).join('');
+      document.querySelectorAll("#category-detail-modal .tx-edit").forEach(btn=>{
+        btn.addEventListener("click", ()=> openTxModal(btn.dataset.id));
+      });
+      $("#category-detail-modal").style.display = "flex";
+    }
+
+    // Transaction edit modal
+    function openTxModal(id){
+      const tx = transactions.find(t=>t.id===id); if (!tx) return;
+      $("#tx-id").value = id;
+      const typeSel = $("#tx-type");
+      const catSel  = $("#tx-category");
+
+      // rebuild categories list for the tx's type
+      while (catSel.options.length>1) catSel.remove(1);
+      categories.forEach(c=>{ if (c.type===tx.type){ const opt=document.createElement('option'); opt.value=c.name; opt.textContent=c.name; catSel.appendChild(opt); } });
+
+      typeSel.value = tx.type;
+      catSel.value  = tx.category;
+      $("#tx-amount").value = Number(tx.amount||0).toFixed(2);
+      $("#tx-date").value   = tx.date;
+      $("#tx-desc").value   = tx.description || '';
+      $("#tx-modal").style.display = 'flex';
+    }
+    document.getElementById('tx-type').addEventListener('change', (e)=>{
+      const catSel  = document.getElementById('tx-category');
+      while (catSel.options.length>1) catSel.remove(1);
+      categories.forEach(c=>{ if (c.type===e.target.value){ const opt=document.createElement('option'); opt.value=c.name; opt.textContent=c.name; catSel.appendChild(opt);} });
+    });
+    document.getElementById('tx-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
       if (!handles) return;
-      const selectedCategory = $("#category").value;
+      const id   = document.getElementById('tx-id').value;
+      const type = document.getElementById('tx-type').value;
+      const cat  = document.getElementById('tx-category').value;
+      const amt  = parseFloat(document.getElementById('tx-amount').value);
+      const date = document.getElementById('tx-date').value;
+      const desc = (document.getElementById('tx-desc').value||'').trim();
+      if (!cat || !isFinite(amt)) { notify('Please enter valid values.'); return; }
+      try {
+        await handles.transactionsCol.doc(id).update({ type, category:cat, amount:Number(amt.toFixed(2)), date, description:desc });
+        document.getElementById('tx-modal').style.display='none';
+        notify('Transaction updated.'); haptic();
+      } catch(err){ console.error(err); notify('Update failed.'); }
+    });
+    document.getElementById('tx-delete').addEventListener('click', async ()=>{
+      const id = document.getElementById('tx-id').value; if (!id) return;
+      if (!confirm('Delete this transaction?')) return;
+      try {
+        await handles.transactionsCol.doc(id).delete();
+        document.getElementById('tx-modal').style.display='none';
+        notify('Transaction deleted.'); haptic();
+      } catch(err){ console.error(err); notify('Delete failed.'); }
+    });
+
+    // Add Transaction
+    const amountInput = document.getElementById("amount");
+    document.querySelectorAll("#amount-chips .amount-chip").forEach(ch=>{
+      ch.addEventListener("click", ()=>{
+        const add = parseFloat(ch.dataset.a);
+        const cur = parseFloat(amountInput.value || "0") || 0;
+        amountInput.value = (cur + add).toFixed(2);
+        amountInput.dispatchEvent(new Event('input', {bubbles:true}));
+        haptic();
+      });
+    });
+    document.getElementById("transaction-form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      if (!handles) return;
+      const selectedCategory = document.getElementById("category").value;
       if (!selectedCategory) { notify("Choose a category first."); return; }
-      const amountVal = parseFloat($("#amount").value);
+      const amountVal = parseFloat(document.getElementById("amount").value);
       if (!isFinite(amountVal) || amountVal<0) { notify("Enter a valid amount."); return; }
       const tx = {
-        type: $("#type").value,
+        type: document.getElementById("type").value,
         category: selectedCategory,
         amount: Number(amountVal.toFixed(2)),
-        date: $("#date").value,
-        description: ($("#description").value || "No description").trim(),
+        date: document.getElementById("date").value,
+        description: (document.getElementById("description").value || "No description").trim(),
         createdAt: Date.now()
       };
       try {
         await handles.transactionsCol.add(tx);
-        e.target.reset(); if (dateEl) dateEl.valueAsDate = new Date(); $("#type").value='income'; rebuildCategoryOptions();
-        notify("Transaction added!");
+        e.target.reset(); if (dateEl) dateEl.valueAsDate = new Date(); document.getElementById("type").value='income'; rebuildCategoryOptions();
+        notify("Transaction added!"); haptic();
       } catch (err) { console.error(err); notify("Error adding transaction"); }
     });
 
-    // Close modals on backdrop tap
+    // Clear all (danger)
+    document.getElementById('clear-btn').addEventListener('click', async ()=>{
+      if (!handles) return;
+      if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
+      try{
+        const txSnap = await handles.transactionsCol.get();
+        const catSnap = await handles.categoriesCol.get();
+        const batch = db.batch();
+        txSnap.forEach(d=> batch.delete(d.ref));
+        catSnap.forEach(d=> batch.delete(d.ref));
+        await batch.commit();
+        notify('All data cleared.');
+      }catch(err){ console.error(err); notify('Error clearing data.'); }
+    });
+
+    // Modals close (tap backdrop)
     window.addEventListener("click", (e)=>{ $$(".modal").forEach(m=>{ if(e.target===m) m.style.display='none'; }) });
 
-    // Manage: copy ID & invite
-    $("#copy-household").addEventListener("click", async ()=>{
-      if (!handles?.id) return; await navigator.clipboard.writeText(handles.id); notify("Household ID copied.");
+    // Copy helpers
+    document.getElementById("copy-household").addEventListener("click", async ()=>{
+      if (!handles?.id) return; await navigator.clipboard.writeText(handles.id); notify("Household ID copied."); haptic();
     });
-    $("#ensure-invite").addEventListener("click", async ()=>{
+    document.getElementById("ensure-invite").addEventListener("click", async ()=>{
       const url = `${BASE_URL}?h=${encodeURIComponent(handles?.id || householdId)}`;
-      const input = $("#invite-url-manage"), copyBtn = $("#copy-link-manage");
+      const input = document.getElementById("invite-url-manage"), copyBtn = document.getElementById("copy-link-manage");
       input.value = url; input.style.display = "inline-block"; copyBtn.style.display = "inline-block";
-      copyBtn.onclick = async ()=>{ await navigator.clipboard.writeText(url); notify("Invite link copied!"); };
-      notify("Invite link ready.");
+      copyBtn.onclick = async ()=>{ await navigator.clipboard.writeText(url); notify("Invite link copied!"); haptic(); };
+      notify("Invite link ready."); haptic();
+    });
+
+    // Keep focused input visible above iPhone keyboard
+    document.addEventListener('focusin', (e)=>{
+      const el = e.target;
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) return;
+      setTimeout(()=>{
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 90){
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 120);
     });
 
   })();
