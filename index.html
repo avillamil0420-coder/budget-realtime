@@ -4,195 +4,134 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Budget Tracker (Realtime)</title>
-  <link rel="icon" href="data:,"><!-- silence favicon 404 -->
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* ===== Dark theme palette ===== */
     :root{
-      --bg: #0f172a;           /* slate-900 */
-      --bg-grad-1:#0b1224;     /* night gradient */
-      --bg-grad-2:#131a2f;
-      --card:#111827;          /* gray-900 */
-      --card-2:#0b1224;        /* deeper card */
-      --muted:#94a3b8;         /* slate-400 */
-      --text:#e5e7eb;          /* gray-200 */
-      --brand:#6ea8fe;         /* soft blue */
-      --brand-2:#4c72ff;       /* brighter accent */
-      --ok:#22c55e;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-      --border:#1f2937;
+      --bg:#0f172a; --bg2:#0b1224; --bg3:#131a2f;
+      --card:#111827; --card2:#0b1120;
+      --border:#1f2937; --muted:#94a3b8; --text:#e5e7eb;
+      --brand:#6ea8fe; --brand2:#4c72ff;
+      --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
     }
-
     *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%}
     body{
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      background: radial-gradient(1200px 700px at 20% -10%, var(--bg-grad-2), transparent),
-                  radial-gradient(900px 600px at 100% 0%, #1c254a66, transparent),
-                  linear-gradient(180deg, var(--bg-grad-1), var(--bg));
-      color: var(--text);
-      min-height: 100vh;
-      padding: 14px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
+      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, var(--bg3), transparent),
+        radial-gradient(900px 600px at 100% 0%, #1c254a66, transparent),
+        linear-gradient(180deg, var(--bg2), var(--bg));
+      min-height:100dvh;
+      padding:12px 12px calc(70px + env(safe-area-inset-bottom));
+      display:flex;flex-direction:column;align-items:center;
     }
+    .container{width:100%;max-width:980px}
+    header{text-align:center;margin:6px 0 12px;}
+    header h1{font-size:1.8rem;letter-spacing:.2px}
+    header p{color:var(--muted);margin-top:6px}
 
-    .container{ width:100%; max-width: 980px; }
-    header{ text-align:center; margin: 10px 0 16px; }
-    header h1{ font-size: 1.9rem; letter-spacing:.2px; }
-    header p{ color: var(--muted); margin-top: 6px; }
-
-    /* Tabs */
-    .tabs{
-      position: sticky; top: 0; z-index: 10;
-      display:flex; gap:6px;
-      background: transparent; padding: 6px 0; margin-bottom: 12px;
-      backdrop-filter: blur(6px);
-    }
+    /* Tabs (top) */
+    .tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;background:transparent;padding:6px 0 8px;backdrop-filter:blur(6px)}
     .tab{
-      flex:1; text-align:center; cursor:pointer; font-weight:700;
-      padding: 12px 10px; border-radius: 12px;
-      color: var(--muted);
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      transition: all .2s ease;
+      flex:1;text-align:center;cursor:pointer;font-weight:700;
+      padding:10px;border-radius:12px;color:var(--muted);
+      background:rgba(255,255,255,0.03);border:1px solid var(--border);
+      transition:transform .08s ease,filter .2s ease,background .2s ease
     }
-    .tab:hover{ color:#fff; }
+    .tab:active{transform:translateY(1px) scale(.995)}
     .tab.active{
-      color:#0b1224;
-      background: linear-gradient(160deg,#9bbcff,#5c7cff);
-      border-color: transparent;
-      box-shadow: 0 10px 28px rgba(78,114,255,.22), inset 0 0 0 1px #cbd5ff40;
+      color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);
+      border-color:transparent;box-shadow:0 10px 28px rgba(78,114,255,.22), inset 0 0 0 1px #cbd5ff40
     }
 
-    /* Layout cards */
-    .app-container{ display:grid; grid-template-columns: 1fr; gap:14px; }
-    @media(min-width: 820px){ .app-container{ grid-template-columns: 1fr 1fr; } }
+    /* Bottom mobile nav */
+    .bottom-nav{
+      position:fixed;left:0;right:0;bottom:0;z-index:25;
+      display:flex;gap:8px;align-items:center;justify-content:space-between;
+      background:linear-gradient(180deg, #0a1020ee, #070c19ee);
+      border-top:1px solid var(--border);
+      padding:8px calc(8px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-right));
+      backdrop-filter:saturate(1.2) blur(8px)
+    }
+    .nav-btn{
+      flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+      color:var(--muted);font-size:.85rem;padding:8px;border-radius:12px;border:1px solid var(--border);
+      background:#0b1120;cursor:pointer
+    }
+    .nav-btn.active{color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);border-color:transparent}
 
+    /* Cards & layout */
+    .app-container{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:820px){.app-container{grid-template-columns:1fr 1fr}}
     .card{
-      background: linear-gradient(180deg, var(--card), var(--card-2));
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+      background:linear-gradient(180deg,var(--card),var(--card2));
+      border:1px solid var(--border);border-radius:16px;padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02)
     }
-    .card-title{
-      display:flex; align-items:center; justify-content:space-between;
-      color: #dbeafe; /* light blue */
-      font-size: 1.05rem; margin-bottom: 12px;
-    }
+    .card-title{display:flex;align-items:center;justify-content:space-between;color:#dbeafe;font-size:1.05rem;margin-bottom:12px}
 
-    /* Inputs & buttons */
-    label{ display:block; margin: 8px 0 6px; color: #cbd5e1; font-weight: 600; }
+    label{display:block;margin:8px 0 6px;color:#cbd5e1;font-weight:600}
     input,select{
-      width:100%; background: #0b1120; color: var(--text);
-      border:1px solid var(--border); border-radius: 12px;
-      padding: 12px; font-size: 1rem; min-height: 44px;
-      outline: none;
+      width:100%;background:#0b1120;color:var(--text);
+      border:1px solid var(--border);border-radius:12px;padding:12px;font-size:1rem;min-height:44px;outline:none
     }
-    input:focus, select:focus{ border-color: #395cff; box-shadow: 0 0 0 3px #2b4fff40; }
+    input:focus,select:focus{border-color:#395cff;box-shadow:0 0 0 3px #2b4fff40}
     button{
-      min-height:44px; border:none; border-radius: 12px; cursor:pointer; font-weight:800;
-      color:#0b1224; background: linear-gradient(160deg,#9bbcff,#5c7cff);
-      box-shadow: 0 10px 24px rgba(45,78,255,.25), inset 0 0 0 1px #cbd5ff40;
-      transition: transform .08s ease, filter .2s;
+      min-height:44px;border:none;border-radius:12px;cursor:pointer;font-weight:800;
+      color:#0b1224;background:linear-gradient(160deg,#9bbcff,#5c7cff);
+      box-shadow:0 10px 24px rgba(45,78,255,.25), inset 0 0 0 1px #cbd5ff40;
+      transition:transform .08s ease,filter .2s
     }
-    button:active{ transform: translateY(1px) scale(.995); }
-    .btn-secondary{
-      background: linear-gradient(160deg,#cbd5e11a,#94a3b81a);
-      color:#e5e7eb;
-      box-shadow: inset 0 0 0 1px #74809b40;
-    }
-    .btn-danger{
-      background: linear-gradient(160deg, #ff7474, #ff4b4b);
-      color:white;
-      box-shadow: 0 10px 24px rgba(255,80,80,.25);
-    }
-    .btn-success{
-      background: linear-gradient(160deg, #5df3a6, #2fd071);
-      color:#0b1224;
-      box-shadow: 0 10px 24px rgba(72,255,164,.25);
-    }
+    button:active{transform:translateY(1px) scale(.995)}
+    .btn-secondary{background:linear-gradient(160deg,#cbd5e11a,#94a3b81a);color:#e5e7eb;box-shadow:inset 0 0 0 1px #74809b40}
+    .btn-danger{background:linear-gradient(160deg,#ff7474,#ff4b4b);color:#fff;box-shadow:0 10px 24px rgba(255,80,80,.25)}
+    .btn-success{background:linear-gradient(160deg,#5df3a6,#2fd071);color:#0b1224;box-shadow:0 10px 24px rgba(72,255,164,.25)}
 
-    /* Lists */
-    .transaction-list{ max-height: 360px; overflow-y:auto; }
-    .transaction-item{
-      display:flex; justify-content:space-between; align-items:center;
-      padding: 10px; border-top: 1px solid var(--border);
-      font-size: .98rem;
-    }
-    .transaction-item:first-child{ border-top:none; }
-    .income{ color: var(--ok); } .expense{ color: var(--bad); }
+    .transaction-list{max-height:360px;overflow-y:auto}
+    .transaction-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-top:1px solid var(--border);font-size:.98rem}
+    .transaction-item:first-child{border-top:none}
+    .income{color:var(--ok)} .expense{color:var(--bad)}
 
-    /* Categories grid */
-    .category-badges{ display:grid; grid-template-columns: 1fr; gap: 10px; }
-    @media(min-width:560px){ .category-badges{ grid-template-columns: 1fr 1fr; } }
-    .category-badge{
-      background: #0b1120; border: 1px solid var(--border); border-radius: 14px; padding: 12px;
-    }
-    .category-header{ display:flex; justify-content:space-between; margin-bottom: 8px; color:#e2e8f0; }
+    .category-badges{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:560px){.category-badges{grid-template-columns:1fr 1fr}}
+    .category-badge{background:#0b1120;border:1px solid var(--border);border-radius:14px;padding:12px}
+    .category-header{display:flex;justify-content:space-between;margin-bottom:8px;color:#e2e8f0}
     .progress-bar{height:10px;background:#1f2937;border-radius:6px;overflow:hidden}
     .progress{height:100%}
-    .progress-safe{background:var(--ok)}
-    .progress-warning{background:var(--warn)}
-    .progress-danger{background:var(--bad)}
+    .progress-safe{background:var(--ok)} .progress-warning{background:var(--warn)} .progress-danger{background:var(--bad)}
 
-    /* Modals */
-    .modal{ display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding: 12px;
-      background: rgba(4, 7, 16, .65); backdrop-filter: blur(6px);}
-    .modal-content{ background: linear-gradient(180deg, #0b1120, #0a0f1c);
-      color:var(--text); border:1px solid var(--border); border-radius: 16px; padding: 16px; width: 100%; max-width: 440px; max-height: 90vh; overflow:auto;}
-    .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
-    .close-modal{ background:none; border:none; color:#94a3b8; font-size:1.6rem; }
+    .summary-card{background:linear-gradient(180deg,#0c1326,#0b1120);border:1px solid #243056}
+    .summary-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #243056}
+    .summary-item:last-child{border-bottom:none}
 
-    /* Summary card special */
-    .summary-card{
-      background: linear-gradient(180deg, #0c1326, #0b1120);
-      border: 1px solid #243056;
-    }
-    .summary-item{ display:flex; justify-content:space-between; padding: 8px 0; border-bottom: 1px dashed #243056; }
-    .summary-item:last-child{ border-bottom: none; }
+    .modal{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:12px;background:rgba(4,7,16,.65);backdrop-filter:blur(6px)}
+    .modal-content{background:linear-gradient(180deg,#0b1120,#0a0f1c);color:var(--text);border:1px solid var(--border);border-radius:16px;padding:16px;width:100%;max-width:440px;max-height:90vh;overflow:auto}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .close-modal{background:none;border:none;color:#94a3b8;font-size:1.6rem}
 
-    /* Toast */
-    .notification{
-      position:fixed; top:18px; right:18px; background: #0b1120; border:1px solid #26304b;
-      color:#fff; padding:12px 16px; border-radius: 12px; transform:translateX(140%); transition:transform .3s;
-      box-shadow: 0 10px 24px rgba(0,0,0,.35); z-index:1100
-    }
-    .notification.show{ transform: translateX(0); }
-
-    /* Mobile */
-    input,select,button{ min-height: 44px; }
+    .notification{position:fixed;top:18px;right:18px;background:#0b1120;border:1px solid #26304b;color:#fff;padding:12px 16px;border-radius:12px;transform:translateX(140%);transition:transform .3s;box-shadow:0 10px 24px rgba(0,0,0,.35);z-index:1100}
+    .notification.show{transform:translateX(0)}
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
-      <p>Realtime shared space via one invite link (no sign-in prompts).</p>
+      <h1>💰 Budget Tracker</h1>
+      <p>Realtime shared space • Auto invite link • Mobile-first</p>
     </header>
 
-    <!-- Invite helper (shows if no ?h=...) -->
-    <div id="invite-helper" class="card" style="display:none">
-      <h2 class="card-title"><span><i class="fa-solid fa-link"></i> Create a shared space</span></h2>
-      <p style="color:var(--muted);">Tap the button to create a private invite link. Anyone with the link can use this space instantly.</p>
-      <div style="display:grid;gap:10px;margin-top:10px;">
-        <button id="create-link" class="btn-success"><i class="fa-solid fa-wand-magic-sparkles"></i> Create invite link</button>
-        <input id="invite-url" readonly style="display:none"/>
-        <button id="copy-link" class="btn-secondary" style="display:none"><i class="fa-solid fa-copy"></i> Copy link</button>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
+    <!-- Top tabs -->
+    <div class="tabs" id="tabs">
       <div class="tab active" data-tab="transactions">Transactions</div>
       <div class="tab" data-tab="summary">Summary</div>
       <div class="tab" data-tab="categories">Categories</div>
       <div class="tab" data-tab="manage">Manage</div>
     </div>
 
+    <!-- Main -->
     <div class="app-container">
       <!-- Transactions -->
       <div class="card tab-content active" id="transactions-tab">
@@ -248,10 +187,10 @@
       <!-- Manage -->
       <div class="card tab-content" id="manage-tab">
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
-        <div style="display:grid; gap:10px;">
+        <div style="display:grid;gap:10px;">
           <div>
             <div style="color:#cbd5e1;margin-bottom:6px;">Shared space ID:</div>
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <b id="household-label" style="font-family:ui-monospace,Menlo,Consolas,monospace;"></b>
               <button id="copy-household" class="btn-secondary" style="width:auto;padding:8px 10px;">Copy ID</button>
             </div>
@@ -283,7 +222,15 @@
     </div>
   </div>
 
-  <!-- Add Category Modal -->
+  <!-- Bottom mobile nav -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-btn active" data-tab="transactions"><i class="fa-solid fa-plus"></i><span>Transactions</span></button>
+    <button class="nav-btn" data-tab="summary"><i class="fa-solid fa-chart-column"></i><span>Summary</span></button>
+    <button class="nav-btn" data-tab="categories"><i class="fa-solid fa-tags"></i><span>Categories</span></button>
+    <button class="nav-btn" data-tab="manage"><i class="fa-solid fa-gear"></i><span>Manage</span></button>
+  </nav>
+
+  <!-- Modals -->
   <div class="modal" id="category-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -293,22 +240,18 @@
       <form id="category-form">
         <label for="category-name">Category Name</label>
         <input type="text" id="category-name" required>
-
         <label for="category-type">Type</label>
         <select id="category-type" required>
           <option value="expense">Expense</option>
           <option value="income">Income</option>
         </select>
-
         <label for="category-budget">Monthly Budget (expense) / Target (income)</label>
         <input type="number" id="category-budget" min="0" step="0.01">
-
         <button type="submit" class="btn-success">Save Category</button>
       </form>
     </div>
   </div>
 
-  <!-- Edit Category Modal -->
   <div class="modal" id="category-edit-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -321,22 +264,18 @@
         <input type="hidden" id="edit-old-type">
         <label for="edit-category-name">Name</label>
         <input type="text" id="edit-category-name" required>
-
         <label for="edit-category-type">Type</label>
         <select id="edit-category-type" required>
           <option value="expense">Expense</option>
           <option value="income">Income</option>
         </select>
-
         <label for="edit-category-budget">Monthly Amount / Budget</label>
         <input type="number" id="edit-category-budget" min="0" step="0.01">
-
         <button type="submit" class="btn-success">Save</button>
       </form>
     </div>
   </div>
 
-  <!-- Category Detail Modal -->
   <div class="modal" id="category-detail-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -348,7 +287,6 @@
     </div>
   </div>
 
-  <!-- Transaction Edit Modal -->
   <div class="modal" id="tx-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -357,34 +295,27 @@
       </div>
       <form id="tx-form">
         <input type="hidden" id="tx-id">
-
         <label for="tx-type">Type</label>
         <select id="tx-type" required>
           <option value="income">Income</option>
           <option value="expense">Expense</option>
         </select>
-
         <label for="tx-category">Category</label>
         <select id="tx-category" required>
           <option value="">Select a category</option>
         </select>
-
         <label for="tx-amount">Amount ($)</label>
         <input type="number" id="tx-amount" min="0" step="0.01" required>
-
         <label for="tx-date">Date</label>
         <input type="date" id="tx-date" required>
-
         <label for="tx-desc">Description</label>
         <input type="text" id="tx-desc" placeholder="Description">
-
         <button type="submit" class="btn-success">Save</button>
         <button type="button" id="tx-delete" class="btn-danger" style="margin-top:8px;">Delete</button>
       </form>
     </div>
   </div>
 
-  <!-- Household Switcher Modal -->
   <div class="modal" id="household-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -408,7 +339,7 @@
       onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Your real config
+    // === YOUR CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
       authDomain: "budget-beabb.firebaseapp.com",
@@ -416,29 +347,24 @@
       appId: "1:222008362126:web:70db15c87c13657d16b5df"
     };
 
-    // App & services
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // Expose minimal helpers
     window.$rt = {
-      db,
-      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch,
+      db, addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch,
       getHouseholdHandles: async (householdId) => {
         const householdRef = doc(db, "households", householdId);
         const snap = await getDoc(householdRef);
         if (!snap.exists()) await setDoc(householdRef, { createdAt: Date.now() });
         return {
-          householdId,
-          householdRef,
+          householdId, householdRef,
           categoriesCol: collection(householdRef, "categories"),
           transactionsCol: collection(householdRef, "transactions"),
         };
       }
     };
 
-    // Anonymous auth (silent)
     async function initAuth() {
       try { await setPersistence(auth, browserLocalPersistence); } catch(e){}
       if (!auth.currentUser) {
@@ -452,272 +378,190 @@
   <!-- App logic -->
   <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const BASE_URL = "https://avillamil0420-coder.github.io/budget-realtime/";
+    const BASE_URL = location.origin + location.pathname.replace(/index\.html?$/,''); // auto-detect Pages path
     const qs = new URLSearchParams(location.search);
     let invitedHousehold = qs.get('h') || '';
 
-    /* ===== Invite link helper (always available via Manage too) ===== */
-    const inviteHelper = document.getElementById('invite-helper');
-    const createBtn = document.getElementById('create-link');
-    const inviteUrl = document.getElementById('invite-url');
-    const copyBtn = document.getElementById('copy-link');
-
     function randomId(len=22){
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let s='hh_';
-      for(let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
-      return s;
+      let s='hh_'; for(let i=0;i<len;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s;
     }
-    function showInviteCreator(){
-      inviteHelper.style.display = 'block';
-      createBtn.onclick = async ()=>{
-        const hid = randomId(22);
-        const url = `${BASE_URL}?h=${encodeURIComponent(hid)}`;
-        inviteUrl.value = url; inviteUrl.style.display='block'; copyBtn.style.display='inline-block';
-        copyBtn.onclick = async ()=> { await navigator.clipboard.writeText(url); showNotification('Invite link copied!'); };
-      };
-    }
-    // Show the invite helper if no household param
-    if (!invitedHousehold) showInviteCreator();
 
-    /* ===== Tabs ===== */
+    // Tabs + bottom nav
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
-    function activateTab(tabId) {
-      tabContents.forEach(c => c.classList.remove('active'));
-      const targetTab = document.getElementById(`${tabId}-tab`);
-      if (targetTab) targetTab.classList.add('active');
-      tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
+    const navBtns = document.querySelectorAll('.nav-btn');
+    function activateTab(tabId){
+      tabContents.forEach(c=>c.classList.remove('active'));
+      const target = document.getElementById(`${tabId}-tab`); if (target) target.classList.add('active');
+      tabs.forEach(t=>t.classList.toggle('active', t.dataset.tab===tabId));
+      navBtns.forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
+      // scroll to top section for single-page feel
+      window.scrollTo({top:0,behavior:'smooth'});
     }
-    tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.getAttribute('data-tab'))));
+    tabs.forEach(tab=>tab.addEventListener('click', ()=>activateTab(tab.dataset.tab)));
+    navBtns.forEach(btn=>btn.addEventListener('click', ()=>activateTab(btn.dataset.tab)));
 
-    /* ===== Helpers ===== */
-    function openModal(el){ if (el) el.style.display='flex'; }
-    function closeModal(el){ if (el) el.style.display='none'; }
+    // Modals & helpers
+    function openModal(el){ if(el) el.style.display='flex'; }
+    function closeModal(el){ if(el) el.style.display='none'; }
     document.querySelectorAll('.close-modal').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const target = btn.getAttribute('data-close');
-        if (target) closeModal(document.querySelector(target));
-        else closeModal(btn.closest('.modal'));
+        const target = btn.getAttribute('data-close'); if (target) closeModal(document.querySelector(target)); else closeModal(btn.closest('.modal'));
       });
     });
-    window.addEventListener('click', (e) => {
-      document.querySelectorAll('.modal').forEach(m => { if (e.target === m) m.style.display = 'none'; });
-    });
-
+    window.addEventListener('click', (e)=>{ document.querySelectorAll('.modal').forEach(m=>{if(e.target===m)m.style.display='none'})});
     function showNotification(message){
-      const n = document.getElementById('notification');
-      if (!n) return;
-      n.textContent = message;
-      n.classList.add('show');
-      setTimeout(()=> n.classList.remove('show'), 2600);
+      const n=document.getElementById('notification'); if(!n) return;
+      n.textContent=message; n.classList.add('show'); setTimeout(()=>n.classList.remove('show'),2600);
     }
 
-    /* ===== Elements ===== */
+    // Elements
     const hhLabel = document.getElementById('household-label');
-    const copyHh   = document.getElementById('copy-household');
+    const copyHh = document.getElementById('copy-household');
     const ensureInvite = document.getElementById('ensure-invite');
     const inviteUrlManage = document.getElementById('invite-url-manage');
-    const copyLinkManage  = document.getElementById('copy-link-manage');
+    const copyLinkManage = document.getElementById('copy-link-manage');
 
     const typeSelect = document.getElementById('type');
     const categorySelect = document.getElementById('category');
     const dateEl = document.getElementById('date'); if (dateEl) dateEl.valueAsDate = new Date();
 
-    /* ===== State ===== */
-    let categories = [];
-    let transactions = [];
-    let handles = null;
-    let unsubCats = null;
-    let unsubTx = null;
+    // State
+    let categories=[]; let transactions=[]; let handles=null; let unsubCats=null; let unsubTx=null;
 
-    const {
-      addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
-      getDocs, where, writeBatch, getHouseholdHandles
-    } = window.$rt || {};
+    const { addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch, getHouseholdHandles } = window.$rt || {};
 
-    /* ===== Binding ===== */
     async function bindHousehold(householdId){
-      if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
-      if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
-
-      categories = []; transactions = [];
-      renderTransactions(); renderCategoryBadges(); updateSummary(); renderSummaryChart(); renderSummaryTable();
+      if (typeof unsubCats==='function'){unsubCats();unsubCats=null}
+      if (typeof unsubTx==='function'){unsubTx();unsubTx=null}
+      categories=[]; transactions=[]; renderTransactions(); renderCategoryBadges(); updateSummary(); renderSummaryChart(); renderSummaryTable();
 
       handles = await getHouseholdHandles(householdId);
       if (hhLabel) hhLabel.textContent = handles.householdId;
 
-      // Also surface invite link in Manage
       const fullLink = `${BASE_URL}?h=${encodeURIComponent(householdId)}`;
-      inviteUrlManage.value = fullLink; inviteUrlManage.style.display = 'inline-block';
-      copyLinkManage.style.display = 'inline-block';
-      copyLinkManage.onclick = async ()=> { await navigator.clipboard.writeText(fullLink); showNotification('Invite link copied!'); };
+      inviteUrlManage.value=fullLink; inviteUrlManage.style.display='inline-block';
+      copyLinkManage.style.display='inline-block';
+      copyLinkManage.onclick=async()=>{await navigator.clipboard.writeText(fullLink);showNotification('Invite link copied!')};
 
-      unsubCats = onSnapshot(handles.categoriesCol, (snap) => {
-        categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        rebuildCategoryOptions();
-        renderCategoryBadges();
-        renderSummaryChart();
-        renderSummaryTable();
+      unsubCats = onSnapshot(handles.categoriesCol, (snap)=>{
+        categories = snap.docs.map(d=>({id:d.id,...d.data()}));
+        rebuildCategoryOptions(); renderCategoryBadges(); renderSummaryChart(); renderSummaryTable();
       });
-
-      unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap) => {
-        transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderTransactions();
-        updateSummary();
-        renderCategoryBadges();
-        renderSummaryChart();
-        renderSummaryTable();
+      unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap)=>{
+        transactions = snap.docs.map(d=>({id:d.id,...d.data()}));
+        renderTransactions(); updateSummary(); renderCategoryBadges(); renderSummaryChart(); renderSummaryTable();
       });
     }
 
-    // Start when auth is ready
-    if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
+    // Auto-auth → ensure we always have a household
+    if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged==='function') {
       window.firebaseAuth.onAuthStateChanged(async ()=>{
-        if (invitedHousehold) await bindHousehold(invitedHousehold);
+        if (!invitedHousehold){
+          // First-time visit: create a household automatically
+          invitedHousehold = randomId(22);
+          history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(invitedHousehold)}`);
+          showNotification('Private space created. Share this URL to invite others.');
+        }
+        await bindHousehold(invitedHousehold);
       });
     }
 
-    /* ===== Build UI pieces ===== */
-    function rebuildCategoryOptions() {
-      while (categorySelect.options.length > 1) categorySelect.remove(1);
+    // UI builders
+    function rebuildCategoryOptions(){
+      while (categorySelect.options.length>1) categorySelect.remove(1);
       const currentType = typeSelect.value;
-      categories.forEach(c => {
-        if (c.type === currentType) {
-          const opt = document.createElement('option');
-          opt.value = c.name; opt.textContent = c.name;
-          categorySelect.appendChild(opt);
+      categories.forEach(c=>{
+        if (c.type===currentType){
+          const opt=document.createElement('option'); opt.value=c.name; opt.textContent=c.name; categorySelect.appendChild(opt);
         }
       });
     }
     typeSelect.addEventListener('change', rebuildCategoryOptions);
 
-    function renderCategoryBadges() {
-      const wrap = document.getElementById('category-badges');
-      if (!wrap) return;
-      wrap.innerHTML = '';
-      if (categories.length === 0) {
-        wrap.innerHTML = '<p style="color:var(--muted)">No categories yet. Add one to get started.</p>';
-        return;
-      }
-      categories.forEach((category) => {
-        const sumForCat = transactions
-          .filter(t => t.category === category.name && t.type === category.type)
-          .reduce((s, t) => s + Number(t.amount || 0), 0);
-
-        const hasBudget = typeof category.budget === 'number' && category.budget > 0;
-        const percent = hasBudget ? Math.min(100, (sumForCat / category.budget) * 100) : 0;
-
-        let progressClass = 'progress-safe';
-        if (hasBudget) {
-          if (percent > 75) progressClass = 'progress-danger';
-          else if (percent > 50) progressClass = 'progress-warning';
-        }
-
+    function renderCategoryBadges(){
+      const wrap=document.getElementById('category-badges'); if(!wrap) return;
+      wrap.innerHTML='';
+      if (categories.length===0){ wrap.innerHTML='<p style="color:var(--muted)">No categories yet. Add one to get started.</p>'; return; }
+      categories.forEach(category=>{
+        const sum=transactions.filter(t=>t.category===category.name && t.type===category.type).reduce((s,t)=>s+Number(t.amount||0),0);
+        const hasBudget=typeof category.budget==='number' && category.budget>0;
+        const percent=hasBudget?Math.min(100,(sum/category.budget)*100):0;
+        let progressClass='progress-safe'; if (hasBudget){ if(percent>75)progressClass='progress-danger'; else if(percent>50)progressClass='progress-warning'; }
         const headerRight = hasBudget
-          ? (category.type === 'expense'
-              ? `$${sumForCat.toFixed(2)} / $${category.budget.toFixed(2)}`
-              : `$${sumForCat.toFixed(2)} / target $${category.budget.toFixed(2)}`)
-          : `$${sumForCat.toFixed(2)}`;
-
+          ? (category.type==='expense' ? `$${sum.toFixed(2)} / $${category.budget.toFixed(2)}` : `$${sum.toFixed(2)} / target $${category.budget.toFixed(2)}`)
+          : `$${sum.toFixed(2)}`;
         const remainingText = hasBudget
-          ? (category.type === 'expense'
-              ? `$${(category.budget - sumForCat).toFixed(2)} left`
-              : `$${(category.budget - sumForCat).toFixed(2)} to target`)
+          ? (category.type==='expense' ? `$${(category.budget-sum).toFixed(2)} left` : `$${(category.budget-sum).toFixed(2)} to target`)
           : 'No limit set';
 
-        const badge = document.createElement('div');
-        badge.className = 'category-badge';
-        badge.innerHTML = `
+        const card=document.createElement('div'); card.className='category-badge';
+        card.innerHTML=`
           <div class="category-header">
-            <span class="category-name">${category.name} <small style="color:#8ea1c7;">(${category.type})</small></span>
-            <span class="category-amount">${headerRight}</span>
+            <span>${category.name} <small style="color:#8ea1c7;">(${category.type})</small></span>
+            <span>${headerRight}</span>
           </div>
-          <div class="progress-bar" ${hasBudget ? '' : 'style="opacity:.45;"'}>
-            <div class="progress ${progressClass}" style="width:${hasBudget ? percent : 0}%"></div>
-          </div>
+          <div class="progress-bar" ${hasBudget?'':'style="opacity:.45"'}><div class="progress ${progressClass}" style="width:${hasBudget?percent:0}%"></div></div>
           <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.85rem;color:#94a3b8;">
-            <span>${hasBudget ? `${percent.toFixed(0)}%` : '—'}</span>
-            <span>${remainingText}</span>
+            <span>${hasBudget?percent.toFixed(0)+'%':'—'}</span><span>${remainingText}</span>
           </div>
-          <div style="display:flex; gap:8px; margin-top:10px;">
+          <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn-secondary btn-view" data-id="${category.id}" style="flex:1;">View items</button>
             <button class="btn-secondary btn-edit" data-id="${category.id}" style="flex:1;">Edit</button>
           </div>
         `;
-        wrap.appendChild(badge);
+        wrap.appendChild(card);
       });
-
-      wrap.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-id')));
-      });
-      wrap.querySelectorAll('.btn-view').forEach(btn => {
-        btn.addEventListener('click', () => openDetailModal(btn.getAttribute('data-id')));
-      });
+      wrap.querySelectorAll('.btn-edit').forEach(btn=>btn.addEventListener('click',()=>openEditModal(btn.dataset.id)));
+      wrap.querySelectorAll('.btn-view').forEach(btn=>btn.addEventListener('click',()=>openDetailModal(btn.dataset.id)));
     }
 
-    function renderTransactions() {
-      const list = document.getElementById('transaction-list');
-      if (!list) return;
-      if (transactions.length === 0) {
-        list.innerHTML = `<div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>`;
-        return;
-      }
-      const recent = transactions.slice(0,12);
-      list.innerHTML = recent.map(t => `
+    function renderTransactions(){
+      const list=document.getElementById('transaction-list'); if(!list)return;
+      if (transactions.length===0){ list.innerHTML=`<div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>`;return; }
+      const recent=transactions.slice(0,12);
+      list.innerHTML=recent.map(t=>`
         <div class="transaction-item">
           <div class="transaction-title">
             <i class="fas ${t.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}" style="margin-right:8px;"></i>
-            ${t.description || 'No description'}
-            <small style="color:#8ea1c7;margin-left:8px;">(${t.date})</small>
+            ${t.description || 'No description'} <small style="color:#8ea1c7;margin-left:8px;">(${t.date})</small>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <div class="${t.type==='income'?'income':'expense'}">
-              ${t.type==='income'?'+':'-'}$${Number(t.amount||0).toFixed(2)}
-            </div>
+            <div class="${t.type==='income'?'income':'expense'}">${t.type==='income'?'+':'-'}$${Number(t.amount||0).toFixed(2)}</div>
             <button class="btn-secondary tx-edit" data-id="${t.id}" style="width:auto;padding:6px 10px;">Edit</button>
           </div>
         </div>`).join('');
-      list.querySelectorAll('.tx-edit').forEach(btn=>{
-        btn.addEventListener('click', ()=> openTxModal(btn.getAttribute('data-id')));
-      });
+      list.querySelectorAll('.tx-edit').forEach(btn=>btn.addEventListener('click',()=>openTxModal(btn.dataset.id)));
     }
 
-    function updateSummary() {
-      const totalIncome = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
-      const totalExpenses = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-      const remaining = totalIncome - totalExpenses;
-      document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
-      document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
-      const remainingEl = document.getElementById('remaining-budget');
-      remainingEl.textContent = `$${remaining.toFixed(2)}`;
-      remainingEl.style.color = remaining < 0 ? '#ffb4b4' : '#b0ffcd';
+    function updateSummary(){
+      const inc=transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
+      const exp=transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
+      const rem=inc-exp;
+      document.getElementById('total-income').textContent = `$${inc.toFixed(2)}`;
+      document.getElementById('total-expenses').textContent = `$${exp.toFixed(2)}`;
+      const r=document.getElementById('remaining-budget'); r.textContent=`$${rem.toFixed(2)}`; r.style.color=rem<0?'#ffb4b4':'#b0ffcd';
     }
 
-    /* ===== Summary chart & table ===== */
     function computeCategoryStats(){
-      return categories.map(c => {
-        const spent = transactions
-          .filter(t => t.category === c.name && t.type === c.type)
-          .reduce((s,t)=> s + Number(t.amount||0), 0);
-        const budget = Number(c.budget || 0);
-        const available = budget > 0 ? (budget - spent) : 0;
-        return { name: c.name, type: c.type, budget, spent, available };
+      return categories.map(c=>{
+        const spent=transactions.filter(t=>t.category===c.name && t.type===c.type).reduce((s,t)=>s+Number(t.amount||0),0);
+        const budget=Number(c.budget||0);
+        const available=budget>0?(budget-spent):0;
+        return {name:c.name,type:c.type,budget,spent,available};
       });
     }
     function renderSummaryTable(){
-      const wrap = document.getElementById('summary-table');
-      if (!wrap) return;
-      const rows = computeCategoryStats().map(s => `
+      const wrap=document.getElementById('summary-table'); if(!wrap) return;
+      const rows=computeCategoryStats().map(s=>`
         <tr>
-          <td>${s.name}</td>
-          <td>${s.type}</td>
-          <td style="text-align:right">${s.budget > 0 ? '$'+s.budget.toFixed(2) : '—'}</td>
+          <td>${s.name}</td><td>${s.type}</td>
+          <td style="text-align:right">${s.budget>0?'$'+s.budget.toFixed(2):'—'}</td>
           <td style="text-align:right">$${s.spent.toFixed(2)}</td>
-          <td style="text-align:right">${s.budget > 0 ? '$'+Math.max(0, s.available).toFixed(2) : '—'}</td>
-        </tr>
-      `).join('');
-      wrap.innerHTML = `
+          <td style="text-align:right">${s.budget>0?'$'+Math.max(0,s.available).toFixed(2):'—'}</td>
+        </tr>`).join('');
+      wrap.innerHTML=`
         <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
           <thead>
             <tr style="color:#cbd5e1;">
@@ -728,275 +572,177 @@
               <th style="text-align:right;padding:6px;border-bottom:1px solid #243056;">Available</th>
             </tr>
           </thead>
-          <tbody style="color:#dbeafe;">
-            ${rows || `<tr><td colspan="5" style="padding:8px;color:#8ea1c7;">No categories yet.</td></tr>`}
-          </tbody>
-        </table>
-      `;
+          <tbody style="color:#dbeafe;">${rows || `<tr><td colspan="5" style="padding:8px;color:#8ea1c7;">No categories yet.</td></tr>`}</tbody>
+        </table>`;
     }
     function renderSummaryChart(){
-      const canvas = document.getElementById('summary-chart');
-      if (!canvas || typeof Chart === 'undefined') return;
-      const stats = computeCategoryStats().filter(s => s.type === 'expense' && s.budget > 0);
-      const labels = stats.map(s => s.name);
-      const spent  = stats.map(s => Math.min(s.spent, s.budget));
-      const avail  = stats.map(s => Math.max(0, s.budget - s.spent));
-      if (window.summaryChart) { window.summaryChart.destroy(); window.summaryChart = null; }
-      const ctx = canvas.getContext('2d');
-      window.summaryChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets: [
-          {label:'Spent',data:spent,stack:'b'},
-          {label:'Available',data:avail,stack:'b'}
-        ] },
-        options: {
-          responsive:true, maintainAspectRatio:false,
-          scales:{ y:{beginAtZero:true, grid:{color:'#243056'}, ticks:{color:'#cbd5e1'}, title:{display:true,text:'Amount ($)',color:'#cbd5e1'}},
-                  x:{ticks:{color:'#cbd5e1'}, grid:{color:'#243056'}} },
-          plugins:{ legend:{position:'bottom', labels:{color:'#cbd5e1'}},
-            tooltip:{ callbacks:{ footer(c){const i=c[0].dataIndex;const s=stats[i];return `Budget: $${s.budget.toFixed(2)} | Spent: $${s.spent.toFixed(2)} | Available: $${Math.max(0,s.available).toFixed(2)}`; } } } }
-        }
-      });
+      const canvas=document.getElementById('summary-chart'); if(!canvas||typeof Chart==='undefined')return;
+      const stats=computeCategoryStats().filter(s=>s.type==='expense' && s.budget>0);
+      const labels=stats.map(s=>s.name); const spent=stats.map(s=>Math.min(s.spent,s.budget)); const avail=stats.map(s=>Math.max(0,s.budget-s.spent));
+      if (window.summaryChart){window.summaryChart.destroy(); window.summaryChart=null;}
+      const ctx=canvas.getContext('2d');
+      window.summaryChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Spent',data:spent,stack:'b'},{label:'Available',data:avail,stack:'b'}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          scales:{y:{beginAtZero:true,grid:{color:'#243056'},ticks:{color:'#cbd5e1'},title:{display:true,text:'Amount ($)',color:'#cbd5e1'}},
+                 x:{ticks:{color:'#cbd5e1'},grid:{color:'#243056'}}},
+          plugins:{legend:{position:'bottom',labels:{color:'#cbd5e1'}},
+            tooltip:{callbacks:{footer(c){const i=c[0].dataIndex;const s=stats[i];return `Budget: $${s.budget.toFixed(2)} | Spent: $${s.spent.toFixed(2)} | Available: $${Math.max(0,s.available).toFixed(2)}`;}}}}});
     }
 
-    /* ===== Category add ===== */
-    const categoryModal = document.getElementById('category-modal');
-    document.getElementById('add-category-btn').addEventListener('click', ()=> openModal(categoryModal));
-    document.getElementById('category-form').addEventListener('submit', async function(e){
+    // Add Category
+    document.getElementById('add-category-btn').addEventListener('click',()=>openModal(document.getElementById('category-modal')));
+    document.getElementById('category-form').addEventListener('submit',async function(e){
       e.preventDefault();
-      if (!handles) { showNotification('Open with an invite link first (or create one).'); return; }
-      const name   = document.getElementById('category-name').value.trim();
-      const type   = document.getElementById('category-type').value;
-      const budget = parseFloat(document.getElementById('category-budget').value) || 0;
-      if (!name) return;
-      const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type);
-      if (exists) { showNotification('Category already exists for this type.'); return; }
-      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
-      try {
-        await addDoc(handles.categoriesCol, { name, type, budget });
-        this.reset(); closeModal(categoryModal); showNotification('Category added!');
-      } catch (err) { console.error(err); showNotification(`Error: ${err.message || err}`); }
-      finally { btn.disabled = false; }
+      const name=document.getElementById('category-name').value.trim();
+      const type=document.getElementById('category-type').value;
+      const budget=parseFloat(document.getElementById('category-budget').value)||0;
+      if(!name)return;
+      const exists=categories.some(c=>c.name.toLowerCase()===name.toLowerCase()&&c.type===type);
+      if(exists){showNotification('Category already exists for this type.');return;}
+      const btn=this.querySelector('button[type="submit"]');btn.disabled=true;
+      try{await addDoc(handles.categoriesCol,{name,type,budget}); this.reset(); closeModal(document.getElementById('category-modal')); showNotification('Category added!');}
+      catch(err){console.error(err);showNotification(`Error: ${err.message||err}`);}
+      finally{btn.disabled=false;}
     });
 
-    /* ===== Category edit + cascade ===== */
-    const editModal = document.getElementById('category-edit-modal');
-    document.getElementById('category-edit-form').addEventListener('submit', async function(e){
+    // Edit Category + cascade
+    document.getElementById('category-edit-form').addEventListener('submit',async function(e){
       e.preventDefault();
-      const id = document.getElementById('edit-category-id').value;
-      const oldName = document.getElementById('edit-old-name').value;
-      const oldType = document.getElementById('edit-old-type').value;
-      const newName = document.getElementById('edit-category-name').value.trim();
-      const newType = document.getElementById('edit-category-type').value;
-      const newBudget = parseFloat(document.getElementById('edit-category-budget').value) || 0;
-      const dup = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
-      if (dup) { showNotification('Another category with this name & type exists.'); return; }
-      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
-      try {
-        await window.$rt.updateDoc(window.$rt.doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
-        const changed = (oldName !== newName) || (oldType !== newType);
-        if (changed) {
-          const q = window.$rt.query(handles.transactionsCol,
-            window.$rt.where('category','==',oldName),
-            window.$rt.where('type','==',oldType));
-          const snap = await window.$rt.getDocs(q);
-          if (!snap.empty) {
-            const batch = window.$rt.writeBatch(window.$rt.db);
-            snap.forEach(d => batch.update(d.ref, { category: newName, type: newType }));
-            await batch.commit();
-          }
+      const id=document.getElementById('edit-category-id').value;
+      const oldName=document.getElementById('edit-old-name').value;
+      const oldType=document.getElementById('edit-old-type').value;
+      const newName=document.getElementById('edit-category-name').value.trim();
+      const newType=document.getElementById('edit-category-type').value;
+      const newBudget=parseFloat(document.getElementById('edit-category-budget').value)||0;
+      const dup=categories.some(c=>c.id!==id && c.name.toLowerCase()===newName.toLowerCase() && c.type===newType);
+      if(dup){showNotification('Another category with this name & type exists.');return;}
+      const btn=this.querySelector('button[type="submit"]');btn.disabled=true;
+      try{
+        await window.$rt.updateDoc(window.$rt.doc(handles.categoriesCol,id),{name:newName,type:newType,budget:newBudget});
+        if(oldName!==newName || oldType!==newType){
+          const q=window.$rt.query(handles.transactionsCol, window.$rt.where('category','==',oldName), window.$rt.where('type','==',oldType));
+          const snap=await window.$rt.getDocs(q);
+          if(!snap.empty){ const batch=window.$rt.writeBatch(window.$rt.db); snap.forEach(d=>batch.update(d.ref,{category:newName,type:newType})); await batch.commit(); }
         }
-        closeModal(editModal); showNotification('Category updated!');
-      } catch (err) { console.error(err); showNotification(`Error: ${err.message || err}`); }
-      finally { btn.disabled = false; }
+        closeModal(document.getElementById('category-edit-modal')); showNotification('Category updated!');
+      }catch(err){console.error(err);showNotification(`Error: ${err.message||err}`);} finally{btn.disabled=false;}
     });
     function openEditModal(id){
-      const cat = categories.find(c => c.id === id);
-      if (!cat) return;
-      document.getElementById('edit-category-id').value = id;
-      document.getElementById('edit-old-name').value = cat.name;
-      document.getElementById('edit-old-type').value = cat.type;
-      document.getElementById('edit-category-name').value = cat.name;
-      document.getElementById('edit-category-type').value = cat.type;
-      document.getElementById('edit-category-budget').value = cat.budget || 0;
-      openModal(editModal);
+      const cat=categories.find(c=>c.id===id); if(!cat)return;
+      document.getElementById('edit-category-id').value=id;
+      document.getElementById('edit-old-name').value=cat.name;
+      document.getElementById('edit-old-type').value=cat.type;
+      document.getElementById('edit-category-name').value=cat.name;
+      document.getElementById('edit-category-type').value=cat.type;
+      document.getElementById('edit-category-budget').value=cat.budget||0;
+      openModal(document.getElementById('category-edit-modal'));
     }
 
-    /* ===== Category details ===== */
-    const detailModal = document.getElementById('category-detail-modal');
-    const detailTitle = document.getElementById('detail-title');
-    const detailItems = document.getElementById('detail-items');
-    const detailSummary = document.getElementById('detail-summary');
+    // Category Details
     function openDetailModal(id){
-      const cat = categories.find(c => c.id === id);
-      if (!cat) return;
-      const items = transactions.filter(t => t.category === cat.name && t.type === cat.type);
-      const total = items.reduce((s,t)=> s + Number(t.amount||0), 0);
-      const budget = cat.budget || 0;
-      detailTitle.textContent = `${cat.name} (${cat.type})`;
-      detailSummary.innerHTML = `
+      const cat=categories.find(c=>c.id===id); if(!cat)return;
+      const items=transactions.filter(t=>t.category===cat.name && t.type===cat.type);
+      const total=items.reduce((s,t)=>s+Number(t.amount||0),0); const budget=cat.budget||0;
+      document.getElementById('detail-title').textContent=`${cat.name} (${cat.type})`;
+      document.getElementById('detail-summary').innerHTML=`
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#cbd5e1;">
-          <div><strong>Total ${cat.type === 'expense' ? 'spent' : 'received'}:</strong> $${total.toFixed(2)}</div>
-          <div><strong>${cat.type === 'expense' ? 'Budget' : 'Target'}:</strong> ${budget > 0 ? '$'+budget.toFixed(2) : '—'}</div>
-          ${budget > 0 ? `<div><strong>${cat.type === 'expense' ? 'Left' : 'To target'}:</strong> $${(budget - total).toFixed(2)}</div>` : ''}
+          <div><strong>Total ${cat.type==='expense'?'spent':'received'}:</strong> $${total.toFixed(2)}</div>
+          <div><strong>${cat.type==='expense'?'Budget':'Target'}:</strong> ${budget>0?'$'+budget.toFixed(2):'—'}</div>
+          ${budget>0?`<div><strong>${cat.type==='expense'?'Left':'To target'}:</strong> $${(budget-total).toFixed(2)}</div>`:''}
         </div>`;
-      if (items.length === 0) {
-        detailItems.innerHTML = `<p style="margin-top:10px;color:#8ea1c7;">No ${cat.type} entries in this category yet.</p>`;
-      } else {
-        detailItems.innerHTML = items
-          .sort((a,b)=> new Date(b.date) - new Date(a.date))
-          .map(item => `
-            <div class="transaction-item" style="padding-left:0;">
-              <div class="transaction-title">
-                <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
-                ${item.description || 'No description'} <small style="color:#8ea1c7;margin-left:8px;">(${item.date})</small>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <div class="${item.type==='income'?'income':'expense'}">
-                  ${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}
-                </div>
-                <button class="btn-secondary tx-edit" data-id="${item.id}" style="width:auto;padding:6px 10px;">Edit</button>
-              </div>
-            </div>`).join('');
-        detailItems.querySelectorAll('.tx-edit').forEach(btn=>{
-          btn.addEventListener('click', ()=> openTxModal(btn.getAttribute('data-id')));
-        });
-      }
-      openModal(detailModal);
+      document.getElementById('detail-items').innerHTML = items.length===0
+        ? `<p style="margin-top:10px;color:#8ea1c7;">No ${cat.type} entries in this category yet.</p>`
+        : items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(item=>`
+          <div class="transaction-item" style="padding-left:0;">
+            <div class="transaction-title">
+              <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
+              ${item.description || 'No description'} <small style="color:#8ea1c7;margin-left:8px;">(${item.date})</small>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="${item.type==='income'?'income':'expense'}">${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}</div>
+              <button class="btn-secondary tx-edit" data-id="${item.id}" style="width:auto;padding:6px 10px;">Edit</button>
+            </div>
+          </div>`).join('');
+      document.querySelectorAll('#category-detail-modal .tx-edit').forEach(btn=>btn.addEventListener('click',()=>openTxModal(btn.dataset.id)));
+      openModal(document.getElementById('category-detail-modal'));
     }
 
-    /* ===== Transaction edit ===== */
+    // Transaction edit
     function fillTxCategoryOptions(typeValue, selectEl, preselectValue){
-      while (selectEl.options.length > 1) selectEl.remove(1);
-      categories.forEach(c => {
-        if (c.type === typeValue) {
-          const opt = document.createElement('option');
-          opt.value = c.name; opt.textContent = c.name;
-          selectEl.appendChild(opt);
-        }
-      });
-      if (preselectValue) selectEl.value = preselectValue;
+      while(selectEl.options.length>1) selectEl.remove(1);
+      categories.forEach(c=>{ if(c.type===typeValue){ const opt=document.createElement('option'); opt.value=c.name; opt.textContent=c.name; selectEl.appendChild(opt); } });
+      if(preselectValue) selectEl.value=preselectValue;
     }
     function openTxModal(id){
-      const tx = transactions.find(t => t.id === id);
-      if (!tx) return;
-      document.getElementById('tx-id').value = id;
-      const typeSel = document.getElementById('tx-type');
-      const catSel  = document.getElementById('tx-category');
-      typeSel.value = tx.type;
-      fillTxCategoryOptions(tx.type, catSel, tx.category);
-      document.getElementById('tx-amount').value = Number(tx.amount||0).toFixed(2);
-      document.getElementById('tx-date').value = tx.date;
-      document.getElementById('tx-desc').value = tx.description || '';
+      const tx=transactions.find(t=>t.id===id); if(!tx) return;
+      document.getElementById('tx-id').value=id;
+      const typeSel=document.getElementById('tx-type');
+      const catSel=document.getElementById('tx-category');
+      typeSel.value=tx.type; fillTxCategoryOptions(tx.type, catSel, tx.category);
+      document.getElementById('tx-amount').value=Number(tx.amount||0).toFixed(2);
+      document.getElementById('tx-date').value=tx.date;
+      document.getElementById('tx-desc').value=tx.description||'';
       openModal(document.getElementById('tx-modal'));
     }
-    document.getElementById('tx-type').addEventListener('change', (e)=>{
-      fillTxCategoryOptions(e.target.value, document.getElementById('tx-category'));
-    });
-    document.getElementById('tx-form').addEventListener('submit', async (e)=>{
+    document.getElementById('tx-type').addEventListener('change',(e)=>fillTxCategoryOptions(e.target.value,document.getElementById('tx-category')));
+    document.getElementById('tx-form').addEventListener('submit',async(e)=>{
       e.preventDefault();
-      const id   = document.getElementById('tx-id').value;
-      const type = document.getElementById('tx-type').value;
-      const cat  = document.getElementById('tx-category').value;
-      const amt  = parseFloat(document.getElementById('tx-amount').value);
-      const date = document.getElementById('tx-date').value;
-      const desc = (document.getElementById('tx-desc').value || '').trim();
-      if (!cat || !isFinite(amt)) { showNotification('Please enter valid values.'); return; }
+      const id=document.getElementById('tx-id').value;
+      const type=document.getElementById('tx-type').value;
+      const cat=document.getElementById('tx-category').value;
+      const amt=parseFloat(document.getElementById('tx-amount').value);
+      const date=document.getElementById('tx-date').value;
+      const desc=(document.getElementById('tx-desc').value||'').trim();
+      if(!cat||!isFinite(amt)){showNotification('Please enter valid values.');return;}
       try{
-        await window.$rt.updateDoc(window.$rt.doc(handles.transactionsCol, id),
-          { type, category: cat, amount: Number(amt.toFixed(2)), date, description: desc });
-        closeModal(document.getElementById('tx-modal'));
-        showNotification('Transaction updated.');
-      }catch(err){ console.error(err); showNotification(`Update failed: ${err.message || err}`); }
+        await window.$rt.updateDoc(window.$rt.doc(handles.transactionsCol,id),{type,category:cat,amount:Number(amt.toFixed(2)),date,description:desc});
+        closeModal(document.getElementById('tx-modal')); showNotification('Transaction updated.');
+      }catch(err){console.error(err);showNotification(`Update failed: ${err.message||err}`);}
     });
-    document.getElementById('tx-delete').addEventListener('click', async ()=>{
-      const id = document.getElementById('tx-id').value;
-      if (!id) return;
-      if (!confirm('Delete this transaction?')) return;
-      try{
-        await window.$rt.deleteDoc(window.$rt.doc(handles.transactionsCol, id));
-        closeModal(document.getElementById('tx-modal'));
-        showNotification('Transaction deleted.');
-      }catch(err){ console.error(err); showNotification(`Delete failed: ${err.message || err}`); }
+    document.getElementById('tx-delete').addEventListener('click',async()=>{
+      const id=document.getElementById('tx-id').value; if(!id) return;
+      if(!confirm('Delete this transaction?')) return;
+      try{ await window.$rt.deleteDoc(window.$rt.doc(handles.transactionsCol,id)); closeModal(document.getElementById('tx-modal')); showNotification('Transaction deleted.'); }
+      catch(err){console.error(err);showNotification(`Delete failed: ${err.message||err}`);}
     });
 
-    /* ===== Transaction add ===== */
-    document.getElementById('transaction-form').addEventListener('submit', async function(e){
+    // Add Transaction
+    document.getElementById('transaction-form').addEventListener('submit',async function(e){
       e.preventDefault();
-      if (!handles) { showNotification('Open with an invite link first (or create one).'); return; }
-      const selectedCategory = categorySelect.value;
-      if (!selectedCategory) { showNotification('Please choose a category first.'); return; }
-      const amountVal = parseFloat(document.getElementById('amount').value);
-      if (!isFinite(amountVal) || amountVal < 0) { showNotification('Enter a valid amount (>= 0).'); return; }
-      const transaction = {
-        type: typeSelect.value,
-        category: selectedCategory,
-        amount: Number(amountVal.toFixed(2)),
-        date: document.getElementById('date').value,
-        description: (document.getElementById('description').value || 'No description').trim(),
-        createdAt: Date.now()
-      };
-      const btn = this.querySelector('button[type="submit"]'); btn.disabled = true;
-      try {
-        await addDoc(handles.transactionsCol, transaction);
-        this.reset(); if (dateEl) dateEl.valueAsDate = new Date(); typeSelect.value = 'income'; rebuildCategoryOptions();
-        showNotification('Transaction added!');
-      } catch (err) { console.error(err); showNotification(`Error adding: ${err.message || err}`); }
-      finally { btn.disabled = false; }
+      const selectedCategory=categorySelect.value; if(!selectedCategory){showNotification('Please choose a category first.');return;}
+      const amountVal=parseFloat(document.getElementById('amount').value); if(!isFinite(amountVal)||amountVal<0){showNotification('Enter a valid amount (>= 0).');return;}
+      const tx={type:typeSelect.value,category:selectedCategory,amount:Number(amountVal.toFixed(2)),date:document.getElementById('date').value,description:(document.getElementById('description').value||'No description').trim(),createdAt:Date.now()};
+      const btn=this.querySelector('button[type="submit"]'); btn.disabled=true;
+      try{ await addDoc(handles.transactionsCol, tx); this.reset(); if (dateEl) dateEl.valueAsDate=new Date(); typeSelect.value='income'; rebuildCategoryOptions(); showNotification('Transaction added!'); }
+      catch(err){ console.error(err); showNotification(`Error adding: ${err.message||err}`); }
+      finally{ btn.disabled=false; }
     });
 
-    /* ===== Clear all ===== */
-    document.getElementById('clear-btn').addEventListener('click', async function(){
-      if (!handles) return;
-      if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
+    // Clear all
+    document.getElementById('clear-btn').addEventListener('click',async()=>{
+      if(!handles) return;
+      if(!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
       try{
-        const delCat = async () => { for (const c of categories) await deleteDoc(doc(handles.categoriesCol, c.id)); };
-        const delTx = async () => { for (const t of transactions) await deleteDoc(doc(handles.transactionsCol, t.id)); };
-        await delTx(); await delCat(); showNotification('All data cleared for this household.');
-      }catch(err){ console.error(err); showNotification(`Error clearing: ${err.message || err}`); }
+        for (const t of transactions) await deleteDoc(doc(handles.transactionsCol,t.id));
+        for (const c of categories) await deleteDoc(doc(handles.categoriesCol,c.id));
+        showNotification('All data cleared for this household.');
+      }catch(err){console.error(err);showNotification(`Error clearing: ${err.message||err}`);}
     });
 
-    /* ===== Household switch ===== */
-    const householdModal = document.getElementById('household-modal');
-    document.getElementById('switch-household-btn').addEventListener('click', ()=> {
-      const input = document.getElementById('household-input');
-      if (input) input.value = handles?.householdId || '';
-      openModal(householdModal);
+    // Manage household switch & invite
+    document.getElementById('switch-household-btn').addEventListener('click',()=>{const i=document.getElementById('household-input'); if(i) i.value=handles?.householdId||''; openModal(document.getElementById('household-modal'));});
+    document.getElementById('household-form').addEventListener('submit',async(e)=>{
+      e.preventDefault(); const newId=(document.getElementById('household-input').value||'').trim(); if(!newId) return;
+      history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(newId)}`); invitedHousehold=newId; await bindHousehold(newId); closeModal(document.getElementById('household-modal')); showNotification(`Switched to: ${newId}`);
     });
-    document.getElementById('household-form').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const newId = (document.getElementById('household-input').value || '').trim();
-      if (!newId) return;
-      history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(newId)}`);
-      invitedHousehold = newId;
-      await bindHousehold(newId);
-      closeModal(householdModal);
-      showNotification(`Switched to: ${newId}`);
-    });
-
-    /* ===== Manage: copy household id & invite link always visible ===== */
-    if (copyHh) copyHh.onclick = async ()=> {
-      if (!handles?.householdId) return;
-      await navigator.clipboard.writeText(handles.householdId);
-      showNotification('Household ID copied.');
-    };
-    if (ensureInvite) ensureInvite.onclick = async ()=>{
-      let h = handles?.householdId || invitedHousehold;
-      if (!h) {
-        h = randomId(22);
-        history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(h)}`);
-        invitedHousehold = h;
-        await bindHousehold(h);
-      }
-      const url = `${BASE_URL}?h=${encodeURIComponent(h)}`;
-      inviteUrlManage.value = url; inviteUrlManage.style.display='inline-block';
-      copyLinkManage.style.display='inline-block';
-      copyLinkManage.onclick = async ()=> { await navigator.clipboard.writeText(url); showNotification('Invite link copied!'); };
+    if (copyHh) copyHh.onclick=async()=>{ if(!handles?.householdId) return; await navigator.clipboard.writeText(handles.householdId); showNotification('Household ID copied.'); };
+    if (ensureInvite) ensureInvite.onclick=async()=>{
+      let h=handles?.householdId||invitedHousehold;
+      if(!h){ h=randomId(22); history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(h)}`); invitedHousehold=h; await bindHousehold(h); }
+      const url=`${BASE_URL}?h=${encodeURIComponent(h)}`; inviteUrlManage.value=url; inviteUrlManage.style.display='inline-block'; copyLinkManage.style.display='inline-block';
+      copyLinkManage.onclick=async()=>{ await navigator.clipboard.writeText(url); showNotification('Invite link copied!'); };
       showNotification('Invite link ready.');
     };
-
-    // Default date value once
-    if (dateEl) dateEl.valueAsDate = new Date();
   });
   </script>
 
