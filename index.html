@@ -139,6 +139,7 @@
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
         <p>Shared space ID (give this to your partner): <b id="household-label"></b></p>
         <div class="actions">
+          <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
           <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
         </div>
       </div>
@@ -193,6 +194,8 @@
       </div>
       <form id="category-edit-form">
         <input type="hidden" id="edit-category-id">
+        <input type="hidden" id="edit-old-name">
+        <input type="hidden" id="edit-old-type">
         <div class="form-group">
           <label for="edit-category-name">Name</label>
           <input type="text" id="edit-category-name" required>
@@ -225,21 +228,38 @@
     </div>
   </div>
 
+  <!-- Household Switcher Modal -->
+  <div class="modal" id="household-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Change Household</h2>
+        <button class="close-modal" data-close="#household-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="household-form">
+        <div class="form-group">
+          <label for="household-input">Enter a shared ID (e.g., <code>our-home-01</code>)</label>
+          <input type="text" id="household-input" placeholder="my-family-01" required>
+        </div>
+        <button type="submit" class="btn-success">Switch</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Firebase: init + expose to window (module) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
-      onSnapshot, query, orderBy, getDoc
+      onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // TODO: replace with your Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      appId: "YOUR_APP_ID",
+      apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
+      authDomain: "budget-beabb.firebaseapp.com",
+      projectId: "budget-beabb",
+      appId: "1:222008362126:web:70db15c87c13657d16b5df",
     };
 
     const app = initializeApp(firebaseConfig);
@@ -247,39 +267,52 @@
     const db = getFirestore(app);
     await signInAnonymously(auth);
 
-    // Everyone uses the same shared doc id (give this to your partner)
-    const householdId = "our-home-01";  // CHANGE if you want a different shared space
-    const householdRef = doc(db, "households", householdId);
-    const maybe = await getDoc(householdRef);
-    if (!maybe.exists()) await setDoc(householdRef, { createdAt: Date.now() });
+    // Helper to ensure household doc exists
+    async function ensureHouseholdDoc(householdId){
+      const ref = doc(db, "households", householdId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
+      return ref;
+    }
 
-    // Collections
-    const categoriesCol   = collection(householdRef, "categories");
-    const transactionsCol = collection(householdRef, "transactions");
+    // Factory: build collections + return handles for a given household
+    async function getHouseholdHandles(householdId){
+      const householdRef = await ensureHouseholdDoc(householdId);
+      return {
+        householdId,
+        householdRef,
+        categoriesCol: collection(householdRef, "categories"),
+        transactionsCol: collection(householdRef, "transactions"),
+      };
+    }
 
-    // Expose to the main script (non-module)
+    // Initial household (default)
+    const DEFAULT_HOUSEHOLD = "our-home-01"; // change if you like
+
+    // Expose shared Firebase utils + a way to switch households at runtime
     window.$rt = {
-      db, auth, categoriesCol, transactionsCol,
-      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
-      householdId
+      db, auth, addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch,
+      getHouseholdHandles
     };
+
+    // Also expose default household id to non-module script
+    window.__DEFAULT_HOUSEHOLD__ = DEFAULT_HOUSEHOLD;
   </script>
 
   <!-- Main App Script -->
   <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // show shared id
-    document.getElementById('household-label').textContent = window.$rt.householdId;
-
-    // Elements
+  document.addEventListener('DOMContentLoaded', async function () {
+    // UI elements
+    const hhLabel = document.getElementById('household-label');
     const typeSelect = document.getElementById('type');
     const categorySelect = document.getElementById('category');
+    const dateEl = document.getElementById('date');
+    if (dateEl) dateEl.valueAsDate = new Date();
 
     // Tabs
     const tabs = document.querySelectorAll('.tab');
-    const menuItems = document.querySelectorAll('.menu-item');
+    const menuItems = document.querySelectorAll('.menu-item'); // optional
     const tabContents = document.querySelectorAll('.tab-content');
-
     function activateTab(tabId) {
       tabContents.forEach(c => c.classList.remove('active'));
       const targetTab = document.getElementById(`${tabId}-tab`);
@@ -290,9 +323,67 @@
     tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.getAttribute('data-tab'))));
     menuItems.forEach(item => item.addEventListener('click', () => activateTab(item.getAttribute('data-tab'))));
 
+    // Toast
+    function showNotification(message){
+      const n = document.getElementById('notification');
+      if (!n) return;
+      n.textContent = message;
+      n.classList.add('show');
+      setTimeout(()=> n.classList.remove('show'), 3000);
+    }
+
+    // App state (will be re-bound on household switch)
+    let categories = [];
+    let transactions = [];
+    let handles = null;
+    let unsubCats = null;
+    let unsubTx = null;
+
+    // Firebase helpers
+    const { addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, writeBatch, getHouseholdHandles } = window.$rt;
+
+    // Bind listeners for a given household
+    async function bindHousehold(householdId){
+      // Clean old listeners
+      if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
+      if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
+
+      // Reset UI lists
+      categories = [];
+      transactions = [];
+      renderTransactions();
+      renderCategoryBadges();
+      updateSummary();
+
+      // Build refs
+      handles = await getHouseholdHandles(householdId);
+      const { categoriesCol, transactionsCol } = handles;
+
+      // Label
+      if (hhLabel) hhLabel.textContent = handles.householdId;
+
+      // Listen to categories
+      unsubCats = onSnapshot(categoriesCol, (snap) => {
+        categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildCategoryOptions();
+        renderCategoryBadges();
+      });
+
+      // Listen to transactions (newest first)
+      unsubTx = onSnapshot(query(transactionsCol, orderBy('date','desc')), (snap) => {
+        transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTransactions();
+        updateSummary();
+        renderCategoryBadges();
+      });
+    }
+
+    // Initial household
+    await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
+
     // Modals helpers
-    function openModal(el){ el.style.display='flex'; }
-    function closeModal(el){ el.style.display='none'; }
+    function openModal(el){ if (el) el.style.display='flex'; }
+    function closeModal(el){ if (el) el.style.display='none'; }
     document.querySelectorAll('.close-modal').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const target = btn.getAttribute('data-close');
@@ -302,37 +393,6 @@
     });
     window.addEventListener('click', (e) => {
       document.querySelectorAll('.modal').forEach(m => { if (e.target === m) m.style.display = 'none'; });
-    });
-
-    // Toast
-    function showNotification(message){
-      const n = document.getElementById('notification');
-      n.textContent = message;
-      n.classList.add('show');
-      setTimeout(()=> n.classList.remove('show'), 3000);
-    }
-
-    // Default date
-    document.getElementById('date').valueAsDate = new Date();
-
-    // Realtime data (Firestore)
-    let categories = [];
-    let transactions = [];
-    const { categoriesCol, transactionsCol, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } = window.$rt;
-
-    // Listen to categories
-    window.$rt.onSnapshot(categoriesCol, (snap) => {
-      categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      rebuildCategoryOptions();
-      renderCategoryBadges();
-    });
-
-    // Listen to transactions (newest first)
-    window.$rt.onSnapshot(window.$rt.query(transactionsCol, window.$rt.orderBy('date','desc')), (snap) => {
-      transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderTransactions();
-      updateSummary();
-      renderCategoryBadges();
     });
 
     // UI builders
@@ -347,11 +407,15 @@
           categorySelect.appendChild(opt);
         }
       });
+      if (categorySelect.value === '') return;
+      const stillExists = [...categorySelect.options].some(o => o.value === categorySelect.value);
+      if (!stillExists) categorySelect.value = '';
     }
     typeSelect.addEventListener('change', rebuildCategoryOptions);
 
     function renderCategoryBadges() {
       const wrap = document.getElementById('category-badges');
+      if (!wrap) return;
       wrap.innerHTML = '';
       if (categories.length === 0) {
         wrap.innerHTML = '<p>No categories yet. Add one to get started.</p>';
@@ -417,6 +481,7 @@
 
     function renderTransactions() {
       const list = document.getElementById('transaction-list');
+      if (!list) return;
       if (transactions.length === 0) {
         list.innerHTML = `
           <div class="transaction-item">
@@ -430,7 +495,7 @@
         <div class="transaction-item">
           <div class="transaction-title">
             <i class="fas ${t.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
-            ${t.description}
+            ${t.description || 'No description'}
             <small style="color:#6c757d;margin-left:8px;">(${t.date})</small>
           </div>
           <div class="${t.type==='income'?'income':'expense'}">
@@ -451,7 +516,7 @@
       remainingEl.style.color = remaining < 0 ? '#e74c3c' : '#2ecc71';
     }
 
-    // Add Category (Firestore)
+    // Add Category
     const categoryModal = document.getElementById('category-modal');
     document.getElementById('add-category-btn').addEventListener('click', ()=> openModal(categoryModal));
     document.getElementById('category-form').addEventListener('submit', async function(e){
@@ -459,21 +524,52 @@
       const name   = document.getElementById('category-name').value.trim();
       const type   = document.getElementById('category-type').value;
       const budget = parseFloat(document.getElementById('category-budget').value) || 0;
-      await window.$rt.addDoc(window.$rt.categoriesCol, { name, type, budget });
+
+      // Prevent duplicates: same name + type
+      const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type);
+      if (exists) { showNotification('Category already exists for this type.'); return; }
+
+      await addDoc(handles.categoriesCol, { name, type, budget });
       this.reset();
       closeModal(categoryModal);
       showNotification('Category added!');
     });
 
-    // Edit Category
+    // Edit Category + cascade rename/type to transactions
     const editModal = document.getElementById('category-edit-modal');
     document.getElementById('category-edit-form').addEventListener('submit', async function(e){
       e.preventDefault();
       const id = document.getElementById('edit-category-id').value;
+      const oldName = document.getElementById('edit-old-name').value;
+      const oldType = document.getElementById('edit-old-type').value;
+
       const newName = document.getElementById('edit-category-name').value.trim();
       const newType = document.getElementById('edit-category-type').value;
       const newBudget = parseFloat(document.getElementById('edit-category-budget').value) || 0;
-      await window.$rt.updateDoc(window.$rt.doc(window.$rt.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
+
+      // Prevent duplicates after rename
+      const exists = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
+      if (exists) { showNotification('Another category with this name & type already exists.'); return; }
+
+      // Update category
+      await updateDoc(doc(handles.categoriesCol, id), { name: newName, type: newType, budget: newBudget });
+
+      // If name/type changed, migrate transactions in a batch
+      const changed = (oldName !== newName) || (oldType !== newType);
+      if (changed) {
+        const q = window.$rt.query(
+          handles.transactionsCol,
+          window.$rt.where('category', '==', oldName),
+          window.$rt.where('type', '==', oldType)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const batch = writeBatch(window.$rt.db);
+          snap.forEach(docSnap => { batch.update(docSnap.ref, { category: newName, type: newType }); });
+          await batch.commit();
+        }
+      }
+
       closeModal(editModal);
       showNotification('Category updated!');
     });
@@ -482,6 +578,8 @@
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
       document.getElementById('edit-category-id').value = id;
+      document.getElementById('edit-old-name').value = cat.name;
+      document.getElementById('edit-old-type').value = cat.type;
       document.getElementById('edit-category-name').value = cat.name;
       document.getElementById('edit-category-type').value = cat.type;
       document.getElementById('edit-category-budget').value = cat.budget || 0;
@@ -520,7 +618,7 @@
             <div class="transaction-item" style="padding-left:0;">
               <div class="transaction-title">
                 <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
-                ${item.description} <small style="color:#6c757d;margin-left:8px;">(${item.date})</small>
+                ${item.description || 'No description'} <small style="color:#6c757d;margin-left:8px;">(${item.date})</small>
               </div>
               <div class="${item.type==='income'?'income':'expense'}">
                 ${item.type==='income'?'+':'-'}$${Number(item.amount||0).toFixed(2)}
@@ -532,20 +630,25 @@
       openModal(detailModal);
     }
 
-    // Add Transaction (Firestore)
+    // Add Transaction
     document.getElementById('transaction-form').addEventListener('submit', async function(e){
       e.preventDefault();
+      const selectedCategory = categorySelect.value;
+      if (!selectedCategory) { showNotification('Please choose a category first.'); return; }
+      const amountVal = parseFloat(document.getElementById('amount').value);
+      if (!isFinite(amountVal) || amountVal < 0) { showNotification('Enter a valid amount (>= 0).'); return; }
+
       const transaction = {
         type: typeSelect.value,
-        category: categorySelect.value,
-        amount: parseFloat(document.getElementById('amount').value),
+        category: selectedCategory,
+        amount: Number(amountVal.toFixed(2)),
         date: document.getElementById('date').value,
         description: (document.getElementById('description').value || 'No description').trim(),
         createdAt: Date.now()
       };
-      await window.$rt.addDoc(window.$rt.transactionsCol, transaction);
+      await addDoc(handles.transactionsCol, transaction);
       this.reset();
-      document.getElementById('date').valueAsDate = new Date();
+      if (dateEl) dateEl.valueAsDate = new Date();
       typeSelect.value = 'income';
       rebuildCategoryOptions();
       showNotification('Transaction added!');
@@ -554,21 +657,34 @@
     // Clear all (danger)
     document.getElementById('clear-btn').addEventListener('click', async function(){
       if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
-      // naive clear: delete each doc (ok for small data sets)
       const delCat = async () => {
         const ids = categories.map(c=>c.id);
-        for (const id of ids) { await window.$rt.deleteDoc(window.$rt.doc(window.$rt.categoriesCol, id)); }
+        for (const id of ids) { await deleteDoc(doc(handles.categoriesCol, id)); }
       };
       const delTx = async () => {
         const ids = transactions.map(t=>t.id);
-        for (const id of ids) { await window.$rt.deleteDoc(window.$rt.doc(window.$rt.transactionsCol, id)); }
+        for (const id of ids) { await deleteDoc(doc(handles.transactionsCol, id)); }
       };
       await delTx(); await delCat();
       showNotification('All data cleared for this household.');
     });
 
-    // Initial UI defaults
-    document.getElementById('date').valueAsDate = new Date();
+    // Household Switcher
+    const householdModal = document.getElementById('household-modal');
+    document.getElementById('switch-household-btn').addEventListener('click', ()=> {
+      const input = document.getElementById('household-input');
+      if (input) input.value = handles?.householdId || '';
+      openModal(householdModal);
+    });
+    document.getElementById('household-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const newId = (document.getElementById('household-input').value || '').trim();
+      if (!newId) return;
+      await bindHousehold(newId);
+      closeModal(householdModal);
+      showNotification(`Switched to: ${newId}`);
+    });
+
   });
   </script>
 
