@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Budget Tracker (Realtime)</title>
+  <link rel="icon" href="data:,"><!-- silence favicon 404 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif}
@@ -44,7 +45,6 @@
     .tab.active{background:#2575fc;color:white;font-weight:bold}
     .tab-content{display:none}
     .tab-content.active{display:block}
-    .mobile-menu{display:none}
     .category-badges{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
     @media (min-width:480px){.category-badges{grid-template-columns:1fr 1fr}}
     .category-badge{background:#f8f9fa;border-radius:8px;padding:12px;display:flex;flex-direction:column}
@@ -62,24 +62,28 @@
     .modal-content{background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .close-modal{background:none;border:none;font-size:1.5rem;color:#6c757d;width:auto}
-    /* Hide app when signed out */
-    .signed-out .app-container{display:none}
+    .signed-out .app-container{display:none} /* hide app until signed in */
   </style>
 </head>
 <body class="signed-out">
   <div class="container">
-    <div id="signed-out-banner" style="max-width:1000px;margin:10px auto 0;">
-  <div style="background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:12px;border-radius:8px;">
-    <b>You’re signed out.</b>
-    <button id="banner-signin" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#2575fc;color:white;cursor:pointer;">
-      Sign in with Email
-    </button>
-  </div>
-</div>
     <header>
       <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
       <p>Realtime for you + your partner (Firebase)</p>
     </header>
+
+    <!-- Signed-out banner (always visible) -->
+    <div id="signed-out-banner" style="max-width:1000px;margin:10px auto 15px; display:none;">
+      <div style="background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:12px;border-radius:8px;">
+        <b>You’re signed out.</b>
+        <button id="banner-signin" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#2575fc;color:white;cursor:pointer;">
+          Sign in with Email
+        </button>
+        <button id="banner-paste" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#6c757d;color:white;cursor:pointer;">
+          Paste sign-in link
+        </button>
+      </div>
+    </div>
 
     <div class="tabs">
       <div class="tab active" data-tab="transactions">Transactions</div>
@@ -145,6 +149,7 @@
         <p>Shared space ID (give this to your partner): <b id="household-label"></b></p>
         <div class="actions">
           <button id="signin-btn" class="btn-success"><i class="fa-solid fa-right-to-bracket"></i> Sign in with Email</button>
+          <button id="signin-paste-btn" class="btn-secondary"><i class="fa-solid fa-clipboard-check"></i> Paste sign-in link</button>
           <button id="signout-btn" class="btn-secondary"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
           <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
           <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
@@ -272,99 +277,133 @@
     </div>
   </div>
 
-  <!-- Firebase (module) -->
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getAuth,
-    isSignInWithEmailLink,
-    sendSignInLinkToEmail,
-    signInWithEmailLink,
-    onAuthStateChanged,
-    signOut,
-    setPersistence,
-    browserLocalPersistence
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import {
-    getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
-    onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <!-- Paste Link Sign-in Modal -->
+  <div class="modal" id="paste-link-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Finish Sign-in (Paste Link)</h2>
+        <button class="close-modal" data-close="#paste-link-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="paste-link-form">
+        <div class="form-group">
+          <label for="paste-email">Your email</label>
+          <input type="email" id="paste-email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="paste-url">Paste the full link from the email</label>
+          <input type="url" id="paste-url" placeholder="https://...mode=signIn&oobCode=..." required>
+        </div>
+        <button type="submit" class="btn-success">Finish Sign-in</button>
+        <p style="margin-top:10px;color:#6c757d;font-size:.9rem;">
+          Tip: copy the email button’s link address and paste it here if the mail app opens a different browser.
+        </p>
+      </form>
+    </div>
+  </div>
 
-  // ✅ YOUR REAL CONFIG HERE
-  const firebaseConfig = {
+  <!-- Firebase (module) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      isSignInWithEmailLink,
+      sendSignInLinkToEmail,
+      signInWithEmailLink,
+      onAuthStateChanged,
+      signOut,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+      onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ✅ YOUR REAL CONFIG HERE
+    const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
       authDomain: "budget-beabb.firebaseapp.com",
       projectId: "budget-beabb",
       appId: "1:222008362126:web:70db15c87c13657d16b5df"
-    // (optional) storageBucket, messagingSenderId okay to include
-  };
+      // (optional) storageBucket, messagingSenderId okay to include
+    };
 
-  // create app & services synchronously (no await here)
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
+    // Create app & services synchronously (no top-level await)
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
 
-  // expose wrappers IMMEDIATELY so the page can bind listeners
-  window.firebaseAuth = {
-    sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
-    signOut: () => signOut(auth),
-    onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
-    currentUser: () => auth.currentUser
-  };
-  window.$rt = {
-    db,
-    getHouseholdHandles: async (householdId) => {
-      const ref  = doc(db, "households", householdId);
+    // Expose wrappers immediately
+    window.firebaseAuth = {
+      sendSignInLink: (email, settings) => sendSignInLinkToEmail(auth, email, settings),
+      signOut: () => signOut(auth),
+      onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb),
+      currentUser: () => auth.currentUser
+    };
+
+    // Firestore helpers + household handles
+    async function ensureHouseholdDoc(householdId){
+      const ref = doc(db, "households", householdId);
       const snap = await getDoc(ref);
       if (!snap.exists()) await setDoc(ref, { createdAt: Date.now() });
+      return ref;
+    }
+    async function getHouseholdHandles(householdId){
+      const householdRef = await ensureHouseholdDoc(householdId);
       return {
         householdId,
-        householdRef: ref,
-        categoriesCol: collection(ref, "categories"),
-        transactionsCol: collection(ref, "transactions"),
+        householdRef,
+        categoriesCol: collection(householdRef, "categories"),
+        transactionsCol: collection(householdRef, "transactions"),
       };
-    },
-    addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
-    getDocs, where, writeBatch
-  };
-  window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
-
-  // do the async bits safely inside a function (no top-level await)
-  async function initFirebaseAuthFlows() {
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-    } catch (e) {
-      console.error("setPersistence failed", e);
     }
+    window.$rt = {
+      db, getHouseholdHandles,
+      addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+      getDocs, where, writeBatch
+    };
+    window.__DEFAULT_HOUSEHOLD__ = "our-home-01";
 
-    // Complete email link sign-in if we arrived via a magic link
-    try {
-      if (isSignInWithEmailLink(auth, window.location.href)) {
-        let email = window.localStorage.getItem('pendingEmail');
-        if (!email) email = window.prompt('Confirm your email to finish sign-in');
-        if (email) {
-          await signInWithEmailLink(auth, email, window.location.href);
-          window.localStorage.removeItem('pendingEmail');
-          // clean the URL
-          window.history.replaceState({}, document.title, window.location.pathname);
+    // Finish email-link sign-in if landing from email
+    async function initFirebaseAuthFlows() {
+      try { await setPersistence(auth, browserLocalPersistence); } catch(e){ console.error("setPersistence failed", e); }
+
+      try {
+        console.log("[auth] location:", window.location.href);
+        const looksLikeEmailLink = isSignInWithEmailLink(auth, window.location.href);
+        console.log("[auth] isSignInWithEmailLink:", looksLikeEmailLink);
+        if (looksLikeEmailLink) {
+          let email = window.localStorage.getItem('pendingEmail');
+          if (!email) email = window.prompt('Confirm your email to finish sign-in');
+          if (email) {
+            await signInWithEmailLink(auth, email, window.location.href);
+            window.localStorage.removeItem('pendingEmail');
+            window.history.replaceState({}, document.title, window.location.pathname); // clean URL
+          }
         }
+      } catch (err) {
+        console.error('Email-link sign-in failed:', err);
+        window.addEventListener('DOMContentLoaded', ()=>{
+          const n = document.getElementById('notification');
+          if (n) { n.textContent = `Auth error: ${err.code || ''} ${err.message || err}`; n.classList.add('show'); }
+        });
       }
-    } catch (err) {
-      console.error('Email-link sign-in failed:', err);
-      // surface a toast once DOM is ready
-      window.addEventListener('DOMContentLoaded', ()=>{
-        const n = document.getElementById('notification');
-        if (n) { n.textContent = `Auth error: ${err.code || ''} ${err.message || err}`; n.classList.add('show'); }
-      });
+      console.log("[firebase] auth ready, currentUser:", auth.currentUser?.email || null);
     }
+    initFirebaseAuthFlows();
 
-    // small breadcrumb for debugging
-    console.log("[firebase] auth ready, currentUser:", auth.currentUser?.email || null);
-  }
-
-  initFirebaseAuthFlows();
-</script>
-
+    // Helper for “Paste link” fallback
+    window.finishEmailLinkSignIn = async (email, link) => {
+      try {
+        await signInWithEmailLink(auth, email, link);
+        window.localStorage.removeItem('pendingEmail');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: e };
+      }
+    };
+  </script>
 
   <!-- App logic -->
   <script>
@@ -412,7 +451,6 @@
     let unsubCats = null;
     let unsubTx = null;
 
-    // Helpers exposed by the module script
     const {
       addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
       getDocs, where, writeBatch, getHouseholdHandles
@@ -420,29 +458,24 @@
 
     // ====== HOUSEHOLD BINDING ======
     async function bindHousehold(householdId){
-      // Clean previous listeners
       if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
       if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
 
-      // Reset UI
       categories = [];
       transactions = [];
       renderTransactions();
       renderCategoryBadges();
       updateSummary();
 
-      // Build refs
       handles = await getHouseholdHandles(householdId);
       if (hhLabel) hhLabel.textContent = handles.householdId;
 
-      // Listen to categories
       unsubCats = onSnapshot(handles.categoriesCol, (snap) => {
         categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         rebuildCategoryOptions();
         renderCategoryBadges();
       });
 
-      // Listen to transactions (newest first)
       unsubTx = onSnapshot(query(handles.transactionsCol, orderBy('date','desc')), (snap) => {
         transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderTransactions();
@@ -453,33 +486,38 @@
 
     // ====== AUTH GATE (GUARDED) ======
     const initAuthListener = () => {
-  if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
-    window.firebaseAuth.onAuthStateChanged(async (user)=>{
-      if (user) {
-        // ✅ user is signed in
-        await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
-        document.body.classList.remove('signed-out');
-        showNotification(`Signed in as ${user.email || 'user'}`);
+      if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
+        window.firebaseAuth.onAuthStateChanged(async (user)=>{
+          const banner = document.getElementById('signed-out-banner');
+          const bannerBtn = document.getElementById('banner-signin');
+          const bannerPaste = document.getElementById('banner-paste');
+
+          if (user) {
+            await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
+            document.body.classList.remove('signed-out');
+            if (banner) banner.style.display = 'none';
+            showNotification(`Signed in as ${user.email || 'user'}`);
+          } else {
+            if (typeof unsubCats === 'function') unsubCats();
+            if (typeof unsubTx === 'function') unsubTx();
+            categories = []; transactions = [];
+            renderTransactions(); renderCategoryBadges(); updateSummary();
+            document.body.classList.add('signed-out');
+
+            if (banner) banner.style.display = 'block';
+            if (bannerBtn) bannerBtn.onclick = () => openModal(document.getElementById('email-modal'));
+            if (bannerPaste) bannerPaste.onclick = () => openModal(document.getElementById('paste-link-modal'));
+
+            // Auto-open the email sign-in modal
+            openModal(document.getElementById('email-modal'));
+          }
+        });
       } else {
-        // ❌ user is signed out
-        if (typeof unsubCats === 'function') unsubCats();
-        if (typeof unsubTx === 'function') unsubTx();
-        categories = []; transactions = [];
-        renderTransactions(); renderCategoryBadges(); updateSummary();
-        document.body.classList.add('signed-out');
-
-        // 👇 Force open the sign-in modal immediately
-        openModal(document.getElementById('email-modal'));
+        console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
+        setTimeout(initAuthListener, 1500);
       }
-    });
-  } else {
-    console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
-    // Retry (prevents crash if modules lag)
-    setTimeout(initAuthListener, 1500);
-  }
-};
-initAuthListener();
-
+    };
+    initAuthListener();
 
     // ====== UI BUILDERS ======
     function rebuildCategoryOptions() {
@@ -556,7 +594,6 @@ initAuthListener();
         wrap.appendChild(badge);
       });
 
-      // Wire buttons
       wrap.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-id')));
       });
@@ -610,7 +647,6 @@ initAuthListener();
       const type   = document.getElementById('category-type').value;
       const budget = parseFloat(document.getElementById('category-budget').value) || 0;
 
-      // Prevent duplicates
       const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type);
       if (exists) { showNotification('Category already exists for this type.'); return; }
 
@@ -640,7 +676,6 @@ initAuthListener();
       const newType = document.getElementById('edit-category-type').value;
       const newBudget = parseFloat(document.getElementById('edit-category-budget').value) || 0;
 
-      // Prevent duplicates after rename
       const dup = categories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase() && c.type === newType);
       if (dup) { showNotification('Another category with this name & type already exists.'); return; }
 
@@ -796,15 +831,20 @@ initAuthListener();
     // ====== EMAIL LINK SIGN-IN UI ======
     const emailModal = document.getElementById('email-modal');
     document.getElementById('signin-btn').addEventListener('click', () => openModal(emailModal));
+    document.getElementById('signin-paste-btn').addEventListener('click', () => openModal(document.getElementById('paste-link-modal')));
+    // banner shortcuts
+    document.getElementById('banner-signin').addEventListener('click', () => openModal(emailModal));
+    document.getElementById('banner-paste').addEventListener('click', () => openModal(document.getElementById('paste-link-modal')));
+
     document.getElementById('email-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
       const email = (document.getElementById('email-input').value || '').trim();
       if (!email) return;
 
+      // IMPORTANT: lock to your GitHub Pages URL (with trailing slash)
       const actionCodeSettings = {
-        url: window.location.origin + window.location.pathname,
+        url: "https://avillamil0420-coder.github.io/budget-realtime/",
         handleCodeInApp: true
-        // dynamicLinkDomain: "YOUR_DYNAMIC_LINK_DOMAIN" // optional if configured
       };
 
       try{
@@ -815,6 +855,30 @@ initAuthListener();
       }catch(err){
         console.error(err);
         showNotification(`Error sending link: ${err.code || ''} ${err.message || err}`);
+      }
+    });
+
+    // Paste link fallback
+    document.getElementById('paste-link-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = (document.getElementById('paste-email').value || '').trim();
+      const link  = (document.getElementById('paste-url').value || '').trim();
+      if (!email || !link) return;
+      const btn = e.submitter || e.target.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
+      try {
+        const res = await window.finishEmailLinkSignIn(email, link);
+        if (res.ok) {
+          closeModal(document.getElementById('paste-link-modal'));
+          showNotification(`Signed in as ${email}`);
+        } else {
+          console.error(res.error);
+          showNotification(`Sign-in failed: ${res.error.code || ''} ${res.error.message || res.error}`);
+        }
+      } catch(err) {
+        console.error(err);
+        showNotification(`Sign-in failed: ${err.code || ''} ${err.message || err}`);
+      } finally {
+        if (btn) btn.disabled = false;
       }
     });
 
