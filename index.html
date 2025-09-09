@@ -68,6 +68,14 @@
 </head>
 <body class="signed-out">
   <div class="container">
+    <div id="signed-out-banner" style="max-width:1000px;margin:10px auto 0;">
+  <div style="background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:12px;border-radius:8px;">
+    <b>You’re signed out.</b>
+    <button id="banner-signin" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:none;background:#2575fc;color:white;cursor:pointer;">
+      Sign in with Email
+    </button>
+  </div>
+</div>
     <header>
       <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
       <p>Realtime for you + your partner (Firebase)</p>
@@ -445,29 +453,33 @@
 
     // ====== AUTH GATE (GUARDED) ======
     const initAuthListener = () => {
-      if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
-        window.firebaseAuth.onAuthStateChanged(async (user)=>{
-          if (user) {
-            await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
-            document.body.classList.remove('signed-out');
-            showNotification(`Signed in as ${user.email || 'user'}`);
-          } else {
-            if (typeof unsubCats === 'function') unsubCats();
-            if (typeof unsubTx === 'function') unsubTx();
-            categories = []; transactions = [];
-            renderTransactions(); renderCategoryBadges(); updateSummary();
-            document.body.classList.add('signed-out');
-            // Auto-open sign-in modal (uncomment if you want it to pop immediately)
-            openModal(document.getElementById('email-modal'));
-          }
-        });
+  if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
+    window.firebaseAuth.onAuthStateChanged(async (user)=>{
+      if (user) {
+        // ✅ user is signed in
+        await bindHousehold(window.__DEFAULT_HOUSEHOLD__ || 'our-home-01');
+        document.body.classList.remove('signed-out');
+        showNotification(`Signed in as ${user.email || 'user'}`);
       } else {
-        console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
-        // Retry (prevents the “line ~796” crash if modules lag)
-        setTimeout(initAuthListener, 1500);
+        // ❌ user is signed out
+        if (typeof unsubCats === 'function') unsubCats();
+        if (typeof unsubTx === 'function') unsubTx();
+        categories = []; transactions = [];
+        renderTransactions(); renderCategoryBadges(); updateSummary();
+        document.body.classList.add('signed-out');
+
+        // 👇 Force open the sign-in modal immediately
+        openModal(document.getElementById('email-modal'));
       }
-    };
-    initAuthListener();
+    });
+  } else {
+    console.error('Auth not ready — check firebaseConfig, imports, and Authorized domains.');
+    // Retry (prevents crash if modules lag)
+    setTimeout(initAuthListener, 1500);
+  }
+};
+initAuthListener();
+
 
     // ====== UI BUILDERS ======
     function rebuildCategoryOptions() {
