@@ -5,63 +5,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Budget Tracker (Realtime)</title>
   <link rel="icon" href="data:,"><!-- silence favicon 404 -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
-    :root{--brand:#2575fc;--ok:#2ecc71;--warn:#f39c12;--bad:#e74c3c}
-    body{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);min-height:100vh;color:#1f2937;padding:12px;display:flex;flex-direction:column;align-items:center}
-    .container{width:100%;max-width:960px}
-    header{text-align:center;margin-bottom:14px;color:white}
-    header h1{font-size:1.8rem;margin-bottom:6px;text-shadow:0 2px 10px rgba(0,0,0,.25)}
-    header p{opacity:.95}
-    .tabs{position:sticky;top:0;z-index:10;display:flex;background:#f8f9fa;border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 3px 12px rgba(0,0,0,.08)}
-    .tab{flex:1;padding:12px 10px;text-align:center;cursor:pointer;font-weight:600}
-    .tab.active{background:var(--brand);color:white}
-    .app-container{display:grid;grid-template-columns:1fr;gap:12px}
-    @media (min-width:760px){.app-container{grid-template-columns:1fr 1fr} header h1{font-size:2.2rem}}
-    .card{background:white;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
-    .card-title{display:flex;align-items:center;justify-content:space-between;color:var(--brand);font-size:1.1rem;margin-bottom:12px}
-    .form-group{margin-bottom:10px}
-    label{display:block;margin-bottom:6px;font-weight:600;font-size:.95rem}
-    input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:1rem;min-height:44px}
-    button{background:var(--brand);color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-weight:700;min-height:44px}
-    button:hover{filter:brightness(.98)}
-    .btn-secondary{background:#6c757d}
-    .btn-danger{background:var(--bad)}
-    .btn-success{background:var(--ok)}
-    .summary-card{background:linear-gradient(135deg,#36d1dc 0%,#5b86e5 100%);color:white}
-    .summary-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.35)}
-    .summary-item:last-child{border-bottom:none}
-    .transaction-list{max-height:360px;overflow-y:auto}
-    .transaction-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;font-size:.95rem}
-    .income{color:var(--ok)} .expense{color:var(--bad)}
-    .category-badges{display:grid;grid-template-columns:1fr;gap:10px}
-    @media (min-width:520px){.category-badges{grid-template-columns:1fr 1fr}}
-    .category-badge{background:#f8f9fa;border-radius:12px;padding:12px}
-    .category-header{display:flex;justify-content:space-between;margin-bottom:8px}
-    .progress-bar{height:10px;background:#e9ecef;border-radius:6px;overflow:hidden}
+    /* ===== Dark theme palette ===== */
+    :root{
+      --bg: #0f172a;           /* slate-900 */
+      --bg-grad-1:#0b1224;     /* night gradient */
+      --bg-grad-2:#131a2f;
+      --card:#111827;          /* gray-900 */
+      --card-2:#0b1224;        /* deeper card */
+      --muted:#94a3b8;         /* slate-400 */
+      --text:#e5e7eb;          /* gray-200 */
+      --brand:#6ea8fe;         /* soft blue */
+      --brand-2:#4c72ff;       /* brighter accent */
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --border:#1f2937;
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      background: radial-gradient(1200px 700px at 20% -10%, var(--bg-grad-2), transparent),
+                  radial-gradient(900px 600px at 100% 0%, #1c254a66, transparent),
+                  linear-gradient(180deg, var(--bg-grad-1), var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+
+    .container{ width:100%; max-width: 980px; }
+    header{ text-align:center; margin: 10px 0 16px; }
+    header h1{ font-size: 1.9rem; letter-spacing:.2px; }
+    header p{ color: var(--muted); margin-top: 6px; }
+
+    /* Tabs */
+    .tabs{
+      position: sticky; top: 0; z-index: 10;
+      display:flex; gap:6px;
+      background: transparent; padding: 6px 0; margin-bottom: 12px;
+      backdrop-filter: blur(6px);
+    }
+    .tab{
+      flex:1; text-align:center; cursor:pointer; font-weight:700;
+      padding: 12px 10px; border-radius: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      transition: all .2s ease;
+    }
+    .tab:hover{ color:#fff; }
+    .tab.active{
+      color:#0b1224;
+      background: linear-gradient(160deg,#9bbcff,#5c7cff);
+      border-color: transparent;
+      box-shadow: 0 10px 28px rgba(78,114,255,.22), inset 0 0 0 1px #cbd5ff40;
+    }
+
+    /* Layout cards */
+    .app-container{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    @media(min-width: 820px){ .app-container{ grid-template-columns: 1fr 1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, var(--card), var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .card-title{
+      display:flex; align-items:center; justify-content:space-between;
+      color: #dbeafe; /* light blue */
+      font-size: 1.05rem; margin-bottom: 12px;
+    }
+
+    /* Inputs & buttons */
+    label{ display:block; margin: 8px 0 6px; color: #cbd5e1; font-weight: 600; }
+    input,select{
+      width:100%; background: #0b1120; color: var(--text);
+      border:1px solid var(--border); border-radius: 12px;
+      padding: 12px; font-size: 1rem; min-height: 44px;
+      outline: none;
+    }
+    input:focus, select:focus{ border-color: #395cff; box-shadow: 0 0 0 3px #2b4fff40; }
+    button{
+      min-height:44px; border:none; border-radius: 12px; cursor:pointer; font-weight:800;
+      color:#0b1224; background: linear-gradient(160deg,#9bbcff,#5c7cff);
+      box-shadow: 0 10px 24px rgba(45,78,255,.25), inset 0 0 0 1px #cbd5ff40;
+      transition: transform .08s ease, filter .2s;
+    }
+    button:active{ transform: translateY(1px) scale(.995); }
+    .btn-secondary{
+      background: linear-gradient(160deg,#cbd5e11a,#94a3b81a);
+      color:#e5e7eb;
+      box-shadow: inset 0 0 0 1px #74809b40;
+    }
+    .btn-danger{
+      background: linear-gradient(160deg, #ff7474, #ff4b4b);
+      color:white;
+      box-shadow: 0 10px 24px rgba(255,80,80,.25);
+    }
+    .btn-success{
+      background: linear-gradient(160deg, #5df3a6, #2fd071);
+      color:#0b1224;
+      box-shadow: 0 10px 24px rgba(72,255,164,.25);
+    }
+
+    /* Lists */
+    .transaction-list{ max-height: 360px; overflow-y:auto; }
+    .transaction-item{
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 10px; border-top: 1px solid var(--border);
+      font-size: .98rem;
+    }
+    .transaction-item:first-child{ border-top:none; }
+    .income{ color: var(--ok); } .expense{ color: var(--bad); }
+
+    /* Categories grid */
+    .category-badges{ display:grid; grid-template-columns: 1fr; gap: 10px; }
+    @media(min-width:560px){ .category-badges{ grid-template-columns: 1fr 1fr; } }
+    .category-badge{
+      background: #0b1120; border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+    }
+    .category-header{ display:flex; justify-content:space-between; margin-bottom: 8px; color:#e2e8f0; }
+    .progress-bar{height:10px;background:#1f2937;border-radius:6px;overflow:hidden}
     .progress{height:100%}
-    .progress-safe{background:var(--ok)} .progress-warning{background:var(--warn)} .progress-danger{background:var(--bad)}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
-    .modal-content{background:white;border-radius:14px;padding:16px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
-    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .close-modal{background:none;border:none;font-size:1.6rem;color:#6c757d}
-    .notification{position:fixed;top:18px;right:18px;background:var(--ok);color:white;padding:12px 16px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.25);transform:translateX(140%);transition:transform .3s;z-index:1100}
-    .notification.show{transform:translateX(0)}
+    .progress-safe{background:var(--ok)}
+    .progress-warning{background:var(--warn)}
+    .progress-danger{background:var(--bad)}
+
+    /* Modals */
+    .modal{ display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding: 12px;
+      background: rgba(4, 7, 16, .65); backdrop-filter: blur(6px);}
+    .modal-content{ background: linear-gradient(180deg, #0b1120, #0a0f1c);
+      color:var(--text); border:1px solid var(--border); border-radius: 16px; padding: 16px; width: 100%; max-width: 440px; max-height: 90vh; overflow:auto;}
+    .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
+    .close-modal{ background:none; border:none; color:#94a3b8; font-size:1.6rem; }
+
+    /* Summary card special */
+    .summary-card{
+      background: linear-gradient(180deg, #0c1326, #0b1120);
+      border: 1px solid #243056;
+    }
+    .summary-item{ display:flex; justify-content:space-between; padding: 8px 0; border-bottom: 1px dashed #243056; }
+    .summary-item:last-child{ border-bottom: none; }
+
+    /* Toast */
+    .notification{
+      position:fixed; top:18px; right:18px; background: #0b1120; border:1px solid #26304b;
+      color:#fff; padding:12px 16px; border-radius: 12px; transform:translateX(140%); transition:transform .3s;
+      box-shadow: 0 10px 24px rgba(0,0,0,.35); z-index:1100
+    }
+    .notification.show{ transform: translateX(0); }
+
+    /* Mobile */
+    input,select,button{ min-height: 44px; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1><i class="fas fa-wallet"></i> Budget Tracker</h1>
-      <p>Open your invite link on any device. No sign-in prompts.</p>
+      <p>Realtime shared space via one invite link (no sign-in prompts).</p>
     </header>
 
-    <!-- Invite helper (only shown when no ?h=...) -->
+    <!-- Invite helper (shows if no ?h=...) -->
     <div id="invite-helper" class="card" style="display:none">
-      <h2 class="card-title"><i class="fa-solid fa-link"></i> Create a shared space</h2>
-      <p>Tap the button to create a private invite link. Anyone with the link shares the same budget space.</p>
+      <h2 class="card-title"><span><i class="fa-solid fa-link"></i> Create a shared space</span></h2>
+      <p style="color:var(--muted);">Tap the button to create a private invite link. Anyone with the link can use this space instantly.</p>
       <div style="display:grid;gap:10px;margin-top:10px;">
         <button id="create-link" class="btn-success"><i class="fa-solid fa-wand-magic-sparkles"></i> Create invite link</button>
         <input id="invite-url" readonly style="display:none"/>
@@ -69,6 +185,7 @@
       </div>
     </div>
 
+    <!-- Tabs -->
     <div class="tabs">
       <div class="tab active" data-tab="transactions">Transactions</div>
       <div class="tab" data-tab="summary">Summary</div>
@@ -81,32 +198,29 @@
       <div class="card tab-content active" id="transactions-tab">
         <h2 class="card-title"><span><i class="fas fa-plus-circle"></i> Add Transaction</span></h2>
         <form id="transaction-form">
-          <div class="form-group">
-            <label for="type">Type</label>
-            <select id="type" required>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
+          <label for="type">Type</label>
+          <select id="type" required>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+
+          <label for="category">Category</label>
+          <select id="category" required>
+            <option value="">Select a category</option>
+          </select>
+
+          <label for="amount">Amount ($)</label>
+          <input type="number" id="amount" min="0" step="0.01" required>
+
+          <label for="date">Date</label>
+          <input type="date" id="date" required>
+
+          <label for="description">Description</label>
+          <input type="text" id="description" placeholder="Optional">
+
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button type="submit" class="btn-success" style="flex:1"><i class="fa-solid fa-plus"></i> Add</button>
           </div>
-          <div class="form-group">
-            <label for="category">Category</label>
-            <select id="category" required>
-              <option value="">Select a category</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="amount">Amount ($)</label>
-            <input type="number" id="amount" min="0" step="0.01" required>
-          </div>
-          <div class="form-group">
-            <label for="date">Date</label>
-            <input type="date" id="date" required>
-          </div>
-          <div class="form-group">
-            <label for="description">Description</label>
-            <input type="text" id="description" placeholder="Optional">
-          </div>
-          <button type="submit" class="btn-success">Add Transaction</button>
         </form>
       </div>
 
@@ -116,7 +230,7 @@
         <div class="summary-item"><span>Total Income:</span><span id="total-income">$0.00</span></div>
         <div class="summary-item"><span>Total Expenses:</span><span id="total-expenses">$0.00</span></div>
         <div class="summary-item"><span>Remaining Budget:</span><span id="remaining-budget">$0.00</span></div>
-        <div style="background:white;border-radius:12px;margin-top:12px;padding:12px;height:280px;">
+        <div style="background:#0b1120;border:1px solid #243056;border-radius:12px;margin-top:12px;padding:12px;height:320px;">
           <canvas id="summary-chart"></canvas>
           <div id="summary-table" style="overflow-x:auto;margin-top:10px;"></div>
         </div>
@@ -134,15 +248,33 @@
       <!-- Manage -->
       <div class="card tab-content" id="manage-tab">
         <h2 class="card-title"><i class="fas fa-cog"></i> Manage</h2>
-        <p>Shared space ID: <b id="household-label"></b></p>
-        <div class="actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-          <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
-          <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
+        <div style="display:grid; gap:10px;">
+          <div>
+            <div style="color:#cbd5e1;margin-bottom:6px;">Shared space ID:</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <b id="household-label" style="font-family:ui-monospace,Menlo,Consolas,monospace;"></b>
+              <button id="copy-household" class="btn-secondary" style="width:auto;padding:8px 10px;">Copy ID</button>
+            </div>
+          </div>
+
+          <div style="border-top:1px dashed var(--border); padding-top:10px;">
+            <div style="color:#cbd5e1;margin-bottom:6px;">Invite link</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+              <button id="ensure-invite" class="btn-success" style="width:auto;padding:8px 10px;"><i class="fa-solid fa-link"></i> Show/Make invite link</button>
+              <input id="invite-url-manage" readonly style="flex:1;min-width:220px;display:none"/>
+              <button id="copy-link-manage" class="btn-secondary" style="width:auto;padding:8px 10px;display:none"><i class="fa-solid fa-copy"></i> Copy link</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap; margin-top:6px;">
+            <button id="switch-household-btn" class="btn-secondary"><i class="fas fa-people-arrows"></i> Change Household</button>
+            <button id="clear-btn" class="btn-danger"><i class="fas fa-trash"></i> Clear All (danger)</button>
+          </div>
         </div>
       </div>
 
       <!-- Recent Transactions -->
-      <div class="card">
+      <div class="card" id="recent-card">
         <h2 class="card-title"><i class="fas fa-list"></i> Recent Transactions</h2>
         <div class="transaction-list" id="transaction-list">
           <div class="transaction-item"><div>No transactions yet</div><div>$0.00</div></div>
@@ -159,15 +291,18 @@
         <button class="close-modal" data-close="#category-modal" aria-label="Close">&times;</button>
       </div>
       <form id="category-form">
-        <div class="form-group"><label for="category-name">Category Name</label><input type="text" id="category-name" required></div>
-        <div class="form-group">
-          <label for="category-type">Type</label>
-          <select id="category-type" required>
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="category-budget">Monthly Budget (expense) / Target (income)</label><input type="number" id="category-budget" min="0" step="0.01"></div>
+        <label for="category-name">Category Name</label>
+        <input type="text" id="category-name" required>
+
+        <label for="category-type">Type</label>
+        <select id="category-type" required>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+
+        <label for="category-budget">Monthly Budget (expense) / Target (income)</label>
+        <input type="number" id="category-budget" min="0" step="0.01">
+
         <button type="submit" class="btn-success">Save Category</button>
       </form>
     </div>
@@ -184,15 +319,18 @@
         <input type="hidden" id="edit-category-id">
         <input type="hidden" id="edit-old-name">
         <input type="hidden" id="edit-old-type">
-        <div class="form-group"><label for="edit-category-name">Name</label><input type="text" id="edit-category-name" required></div>
-        <div class="form-group">
-          <label for="edit-category-type">Type</label>
-          <select id="edit-category-type" required>
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="edit-category-budget">Monthly Amount / Budget</label><input type="number" id="edit-category-budget" min="0" step="0.01"></div>
+        <label for="edit-category-name">Name</label>
+        <input type="text" id="edit-category-name" required>
+
+        <label for="edit-category-type">Type</label>
+        <select id="edit-category-type" required>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+
+        <label for="edit-category-budget">Monthly Amount / Budget</label>
+        <input type="number" id="edit-category-budget" min="0" step="0.01">
+
         <button type="submit" class="btn-success">Save</button>
       </form>
     </div>
@@ -219,15 +357,27 @@
       </div>
       <form id="tx-form">
         <input type="hidden" id="tx-id">
-        <div class="form-group"><label for="tx-type">Type</label>
-          <select id="tx-type" required><option value="income">Income</option><option value="expense">Expense</option></select>
-        </div>
-        <div class="form-group"><label for="tx-category">Category</label>
-          <select id="tx-category" required><option value="">Select a category</option></select>
-        </div>
-        <div class="form-group"><label for="tx-amount">Amount ($)</label><input type="number" id="tx-amount" min="0" step="0.01" required></div>
-        <div class="form-group"><label for="tx-date">Date</label><input type="date" id="tx-date" required></div>
-        <div class="form-group"><label for="tx-desc">Description</label><input type="text" id="tx-desc" placeholder="Description"></div>
+
+        <label for="tx-type">Type</label>
+        <select id="tx-type" required>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+
+        <label for="tx-category">Category</label>
+        <select id="tx-category" required>
+          <option value="">Select a category</option>
+        </select>
+
+        <label for="tx-amount">Amount ($)</label>
+        <input type="number" id="tx-amount" min="0" step="0.01" required>
+
+        <label for="tx-date">Date</label>
+        <input type="date" id="tx-date" required>
+
+        <label for="tx-desc">Description</label>
+        <input type="text" id="tx-desc" placeholder="Description">
+
         <button type="submit" class="btn-success">Save</button>
         <button type="button" id="tx-delete" class="btn-danger" style="margin-top:8px;">Delete</button>
       </form>
@@ -242,10 +392,8 @@
         <button class="close-modal" data-close="#household-modal" aria-label="Close">&times;</button>
       </div>
       <form id="household-form">
-        <div class="form-group">
-          <label for="household-input">Enter a shared ID (e.g., <code>hh_abc123…</code>)</label>
-          <input type="text" id="household-input" placeholder="hh_..." required>
-        </div>
+        <label for="household-input">Enter a shared ID (e.g., <code>hh_abc123…</code>)</label>
+        <input type="text" id="household-input" placeholder="hh_..." required>
         <button type="submit" class="btn-success">Switch</button>
       </form>
     </div>
@@ -260,7 +408,7 @@
       onSnapshot, query, orderBy, getDoc, getDocs, where, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // === CONFIG ===
+    // Your real config
     const firebaseConfig = {
       apiKey: "AIzaSyBrBqhylpvDh8j9c0eddrBuGVt3YEcU1Cs",
       authDomain: "budget-beabb.firebaseapp.com",
@@ -308,12 +456,12 @@
     const qs = new URLSearchParams(location.search);
     let invitedHousehold = qs.get('h') || '';
 
+    /* ===== Invite link helper (always available via Manage too) ===== */
     const inviteHelper = document.getElementById('invite-helper');
     const createBtn = document.getElementById('create-link');
     const inviteUrl = document.getElementById('invite-url');
     const copyBtn = document.getElementById('copy-link');
 
-    // Invite link helper
     function randomId(len=22){
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let s='hh_';
@@ -325,19 +473,14 @@
       createBtn.onclick = async ()=>{
         const hid = randomId(22);
         const url = `${BASE_URL}?h=${encodeURIComponent(hid)}`;
-        inviteUrl.value = url; inviteUrl.style.display='block'; copyBtn.style.display='block';
-        copyBtn.onclick = async ()=> {
-          await navigator.clipboard.writeText(url);
-          showNotification('Invite link copied!');
-        };
+        inviteUrl.value = url; inviteUrl.style.display='block'; copyBtn.style.display='inline-block';
+        copyBtn.onclick = async ()=> { await navigator.clipboard.writeText(url); showNotification('Invite link copied!'); };
       };
     }
+    // Show the invite helper if no household param
+    if (!invitedHousehold) showInviteCreator();
 
-    const hhLabel = document.getElementById('household-label');
-    const typeSelect = document.getElementById('type');
-    const categorySelect = document.getElementById('category');
-    const dateEl = document.getElementById('date'); if (dateEl) dateEl.valueAsDate = new Date();
-
+    /* ===== Tabs ===== */
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
     function activateTab(tabId) {
@@ -348,6 +491,7 @@
     }
     tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.getAttribute('data-tab'))));
 
+    /* ===== Helpers ===== */
     function openModal(el){ if (el) el.style.display='flex'; }
     function closeModal(el){ if (el) el.style.display='none'; }
     document.querySelectorAll('.close-modal').forEach(btn=>{
@@ -369,7 +513,18 @@
       setTimeout(()=> n.classList.remove('show'), 2600);
     }
 
-    // ====== STATE ======
+    /* ===== Elements ===== */
+    const hhLabel = document.getElementById('household-label');
+    const copyHh   = document.getElementById('copy-household');
+    const ensureInvite = document.getElementById('ensure-invite');
+    const inviteUrlManage = document.getElementById('invite-url-manage');
+    const copyLinkManage  = document.getElementById('copy-link-manage');
+
+    const typeSelect = document.getElementById('type');
+    const categorySelect = document.getElementById('category');
+    const dateEl = document.getElementById('date'); if (dateEl) dateEl.valueAsDate = new Date();
+
+    /* ===== State ===== */
     let categories = [];
     let transactions = [];
     let handles = null;
@@ -381,19 +536,22 @@
       getDocs, where, writeBatch, getHouseholdHandles
     } = window.$rt || {};
 
-    // ====== HOUSEHOLD BINDING ======
+    /* ===== Binding ===== */
     async function bindHousehold(householdId){
       if (typeof unsubCats === 'function') { unsubCats(); unsubCats = null; }
       if (typeof unsubTx === 'function') { unsubTx(); unsubTx = null; }
 
-      categories = [];
-      transactions = [];
-      renderTransactions();
-      renderCategoryBadges();
-      updateSummary(); renderSummaryChart(); renderSummaryTable();
+      categories = []; transactions = [];
+      renderTransactions(); renderCategoryBadges(); updateSummary(); renderSummaryChart(); renderSummaryTable();
 
       handles = await getHouseholdHandles(householdId);
       if (hhLabel) hhLabel.textContent = handles.householdId;
+
+      // Also surface invite link in Manage
+      const fullLink = `${BASE_URL}?h=${encodeURIComponent(householdId)}`;
+      inviteUrlManage.value = fullLink; inviteUrlManage.style.display = 'inline-block';
+      copyLinkManage.style.display = 'inline-block';
+      copyLinkManage.onclick = async ()=> { await navigator.clipboard.writeText(fullLink); showNotification('Invite link copied!'); };
 
       unsubCats = onSnapshot(handles.categoriesCol, (snap) => {
         categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -416,24 +574,18 @@
     // Start when auth is ready
     if (window.firebaseAuth && typeof window.firebaseAuth.onAuthStateChanged === 'function') {
       window.firebaseAuth.onAuthStateChanged(async ()=>{
-        if (invitedHousehold) {
-          await bindHousehold(invitedHousehold);
-        } else {
-          // No invite in URL: show link creator
-          showInviteCreator();
-        }
+        if (invitedHousehold) await bindHousehold(invitedHousehold);
       });
     }
 
-    // ====== UI BUILDERS ======
+    /* ===== Build UI pieces ===== */
     function rebuildCategoryOptions() {
       while (categorySelect.options.length > 1) categorySelect.remove(1);
       const currentType = typeSelect.value;
       categories.forEach(c => {
         if (c.type === currentType) {
           const opt = document.createElement('option');
-          opt.value = c.name;
-          opt.textContent = c.name;
+          opt.value = c.name; opt.textContent = c.name;
           categorySelect.appendChild(opt);
         }
       });
@@ -445,7 +597,7 @@
       if (!wrap) return;
       wrap.innerHTML = '';
       if (categories.length === 0) {
-        wrap.innerHTML = '<p>No categories yet. Add one to get started.</p>';
+        wrap.innerHTML = '<p style="color:var(--muted)">No categories yet. Add one to get started.</p>';
         return;
       }
       categories.forEach((category) => {
@@ -478,19 +630,19 @@
         badge.className = 'category-badge';
         badge.innerHTML = `
           <div class="category-header">
-            <span class="category-name">${category.name} <small style="color:#6c757d;">(${category.type})</small></span>
+            <span class="category-name">${category.name} <small style="color:#8ea1c7;">(${category.type})</small></span>
             <span class="category-amount">${headerRight}</span>
           </div>
           <div class="progress-bar" ${hasBudget ? '' : 'style="opacity:.45;"'}>
             <div class="progress ${progressClass}" style="width:${hasBudget ? percent : 0}%"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.85rem;color:#6c757d;">
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.85rem;color:#94a3b8;">
             <span>${hasBudget ? `${percent.toFixed(0)}%` : '—'}</span>
             <span>${remainingText}</span>
           </div>
           <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="btn-secondary btn-view" data-id="${category.id}" style="flex:1;">View items</button>
-            <button class="btn-success btn-edit" data-id="${category.id}" style="flex:1;">Edit</button>
+            <button class="btn-secondary btn-edit" data-id="${category.id}" style="flex:1;">Edit</button>
           </div>
         `;
         wrap.appendChild(badge);
@@ -517,7 +669,7 @@
           <div class="transaction-title">
             <i class="fas ${t.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}" style="margin-right:8px;"></i>
             ${t.description || 'No description'}
-            <small style="color:#6c757d;margin-left:8px;">(${t.date})</small>
+            <small style="color:#8ea1c7;margin-left:8px;">(${t.date})</small>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <div class="${t.type==='income'?'income':'expense'}">
@@ -539,10 +691,10 @@
       document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
       const remainingEl = document.getElementById('remaining-budget');
       remainingEl.textContent = `$${remaining.toFixed(2)}`;
-      remainingEl.style.color = remaining < 0 ? '#ffe3e3' : '#eaffea';
+      remainingEl.style.color = remaining < 0 ? '#ffb4b4' : '#b0ffcd';
     }
 
-    // ====== SUMMARY CHART & TABLE ======
+    /* ===== Summary chart & table ===== */
     function computeCategoryStats(){
       return categories.map(c => {
         const spent = transactions
@@ -568,16 +720,16 @@
       wrap.innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
           <thead>
-            <tr>
-              <th style="text-align:left;padding:6px;border-bottom:1px solid #eee;">Category</th>
-              <th style="text-align:left;padding:6px;border-bottom:1px solid #eee;">Type</th>
-              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Budget/Target</th>
-              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Spent/Received</th>
-              <th style="text-align:right;padding:6px;border-bottom:1px solid #eee;">Available</th>
+            <tr style="color:#cbd5e1;">
+              <th style="text-align:left;padding:6px;border-bottom:1px solid #243056;">Category</th>
+              <th style="text-align:left;padding:6px;border-bottom:1px solid #243056;">Type</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #243056;">Budget/Target</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #243056;">Spent/Received</th>
+              <th style="text-align:right;padding:6px;border-bottom:1px solid #243056;">Available</th>
             </tr>
           </thead>
-          <tbody>
-            ${rows || `<tr><td colspan="5" style="padding:8px;color:#6c757d;">No categories yet.</td></tr>`}
+          <tbody style="color:#dbeafe;">
+            ${rows || `<tr><td colspan="5" style="padding:8px;color:#8ea1c7;">No categories yet.</td></tr>`}
           </tbody>
         </table>
       `;
@@ -593,20 +745,26 @@
       const ctx = canvas.getContext('2d');
       window.summaryChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: [{label:'Spent',data:spent,stack:'b'},{label:'Available',data:avail,stack:'b'}] },
+        data: { labels, datasets: [
+          {label:'Spent',data:spent,stack:'b'},
+          {label:'Available',data:avail,stack:'b'}
+        ] },
         options: {
           responsive:true, maintainAspectRatio:false,
-          scales:{ y:{beginAtZero:true,title:{display:true,text:'Amount ($)'}} },
-          plugins:{ legend:{position:'bottom'}, tooltip:{callbacks:{footer(c){const i=c[0].dataIndex;const s=stats[i];return `Budget: $${s.budget.toFixed(2)} | Spent: $${s.spent.toFixed(2)} | Available: $${Math.max(0,s.available).toFixed(2)}`;}}}}
+          scales:{ y:{beginAtZero:true, grid:{color:'#243056'}, ticks:{color:'#cbd5e1'}, title:{display:true,text:'Amount ($)',color:'#cbd5e1'}},
+                  x:{ticks:{color:'#cbd5e1'}, grid:{color:'#243056'}} },
+          plugins:{ legend:{position:'bottom', labels:{color:'#cbd5e1'}},
+            tooltip:{ callbacks:{ footer(c){const i=c[0].dataIndex;const s=stats[i];return `Budget: $${s.budget.toFixed(2)} | Spent: $${s.spent.toFixed(2)} | Available: $${Math.max(0,s.available).toFixed(2)}`; } } } }
         }
       });
     }
 
-    // ====== CATEGORY ADD ======
+    /* ===== Category add ===== */
     const categoryModal = document.getElementById('category-modal');
     document.getElementById('add-category-btn').addEventListener('click', ()=> openModal(categoryModal));
     document.getElementById('category-form').addEventListener('submit', async function(e){
       e.preventDefault();
+      if (!handles) { showNotification('Open with an invite link first (or create one).'); return; }
       const name   = document.getElementById('category-name').value.trim();
       const type   = document.getElementById('category-type').value;
       const budget = parseFloat(document.getElementById('category-budget').value) || 0;
@@ -621,7 +779,7 @@
       finally { btn.disabled = false; }
     });
 
-    // ====== CATEGORY EDIT (cascade) ======
+    /* ===== Category edit + cascade ===== */
     const editModal = document.getElementById('category-edit-modal');
     document.getElementById('category-edit-form').addEventListener('submit', async function(e){
       e.preventDefault();
@@ -664,7 +822,7 @@
       openModal(editModal);
     }
 
-    // ====== CATEGORY DETAIL ======
+    /* ===== Category details ===== */
     const detailModal = document.getElementById('category-detail-modal');
     const detailTitle = document.getElementById('detail-title');
     const detailItems = document.getElementById('detail-items');
@@ -677,13 +835,13 @@
       const budget = cat.budget || 0;
       detailTitle.textContent = `${cat.name} (${cat.type})`;
       detailSummary.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#cbd5e1;">
           <div><strong>Total ${cat.type === 'expense' ? 'spent' : 'received'}:</strong> $${total.toFixed(2)}</div>
           <div><strong>${cat.type === 'expense' ? 'Budget' : 'Target'}:</strong> ${budget > 0 ? '$'+budget.toFixed(2) : '—'}</div>
           ${budget > 0 ? `<div><strong>${cat.type === 'expense' ? 'Left' : 'To target'}:</strong> $${(budget - total).toFixed(2)}</div>` : ''}
         </div>`;
       if (items.length === 0) {
-        detailItems.innerHTML = `<p style="margin-top:10px;">No ${cat.type} entries in this category yet.</p>`;
+        detailItems.innerHTML = `<p style="margin-top:10px;color:#8ea1c7;">No ${cat.type} entries in this category yet.</p>`;
       } else {
         detailItems.innerHTML = items
           .sort((a,b)=> new Date(b.date) - new Date(a.date))
@@ -691,7 +849,7 @@
             <div class="transaction-item" style="padding-left:0;">
               <div class="transaction-title">
                 <i class="fas ${item.type==='income'?'fa-arrow-up-right income':'fa-arrow-down-left expense'}"></i>
-                ${item.description || 'No description'} <small style="color:#6c757d;margin-left:8px;">(${item.date})</small>
+                ${item.description || 'No description'} <small style="color:#8ea1c7;margin-left:8px;">(${item.date})</small>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 <div class="${item.type==='income'?'income':'expense'}">
@@ -707,7 +865,7 @@
       openModal(detailModal);
     }
 
-    // ====== TRANSACTION EDIT ======
+    /* ===== Transaction edit ===== */
     function fillTxCategoryOptions(typeValue, selectEl, preselectValue){
       while (selectEl.options.length > 1) selectEl.remove(1);
       categories.forEach(c => {
@@ -762,10 +920,10 @@
       }catch(err){ console.error(err); showNotification(`Delete failed: ${err.message || err}`); }
     });
 
-    // ====== TRANSACTION ADD ======
+    /* ===== Transaction add ===== */
     document.getElementById('transaction-form').addEventListener('submit', async function(e){
       e.preventDefault();
-      if (!handles) { showNotification('No household bound. Use an invite link.'); return; }
+      if (!handles) { showNotification('Open with an invite link first (or create one).'); return; }
       const selectedCategory = categorySelect.value;
       if (!selectedCategory) { showNotification('Please choose a category first.'); return; }
       const amountVal = parseFloat(document.getElementById('amount').value);
@@ -787,7 +945,7 @@
       finally { btn.disabled = false; }
     });
 
-    // ====== CLEAR ALL ======
+    /* ===== Clear all ===== */
     document.getElementById('clear-btn').addEventListener('click', async function(){
       if (!handles) return;
       if (!confirm('Are you sure? This erases EVERYTHING for this household.')) return;
@@ -798,7 +956,7 @@
       }catch(err){ console.error(err); showNotification(`Error clearing: ${err.message || err}`); }
     });
 
-    // ====== HOUSEHOLD SWITCH ======
+    /* ===== Household switch ===== */
     const householdModal = document.getElementById('household-modal');
     document.getElementById('switch-household-btn').addEventListener('click', ()=> {
       const input = document.getElementById('household-input');
@@ -816,6 +974,29 @@
       showNotification(`Switched to: ${newId}`);
     });
 
+    /* ===== Manage: copy household id & invite link always visible ===== */
+    if (copyHh) copyHh.onclick = async ()=> {
+      if (!handles?.householdId) return;
+      await navigator.clipboard.writeText(handles.householdId);
+      showNotification('Household ID copied.');
+    };
+    if (ensureInvite) ensureInvite.onclick = async ()=>{
+      let h = handles?.householdId || invitedHousehold;
+      if (!h) {
+        h = randomId(22);
+        history.replaceState({}, document.title, `${BASE_URL}?h=${encodeURIComponent(h)}`);
+        invitedHousehold = h;
+        await bindHousehold(h);
+      }
+      const url = `${BASE_URL}?h=${encodeURIComponent(h)}`;
+      inviteUrlManage.value = url; inviteUrlManage.style.display='inline-block';
+      copyLinkManage.style.display='inline-block';
+      copyLinkManage.onclick = async ()=> { await navigator.clipboard.writeText(url); showNotification('Invite link copied!'); };
+      showNotification('Invite link ready.');
+    };
+
+    // Default date value once
+    if (dateEl) dateEl.valueAsDate = new Date();
   });
   </script>
 
